@@ -1,0 +1,4 @@
+server.pid
+server.log
+token
+cockpit.config.json

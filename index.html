@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Worktrees</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --border: #e3e6eb;
+    --text: #1c2027; --muted: #6b7280; --faint: #9aa1ac;
+    --blue: #2f6fec; --blue-bg: #e8f0fe; --amber: #b76e00; --amber-bg: #fff3dc;
+    --green: #1f8a4c; --green-bg: #e4f5ea; --grey-bg: #eef0f3; --red: #c23b3b; --red-bg: #fdecec;
+    --add: #1f8a4c; --add-bg: #e6f6ec; --del: #c23b3b; --del-bg: #fdecec; --hunk: #6b5bd6;
+    --term-bg: #0f1115; --term-fg: #d6d9de;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --surface: #171a21; --surface-2: #1e222b; --border: #2a2f3a;
+      --text: #e6e8ec; --muted: #9aa1ac; --faint: #6b7280;
+      --blue: #79a6ff; --blue-bg: #1b2a4a; --amber: #f2b550; --amber-bg: #3a2b10;
+      --green: #5fd08f; --green-bg: #15301f; --grey-bg: #222731; --red: #ff8a8a; --red-bg: #351818;
+      --add: #5fd08f; --add-bg: #13281b; --del: #ff8a8a; --del-bg: #351818; --hunk: #a99cff;
+      --term-bg: #0a0c0f;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  button { font: inherit; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+  h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  .counters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .counter { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--grey-bg); color: var(--muted); }
+  .counter.needs { background: var(--amber-bg); color: var(--amber); }
+  .counter.working { background: var(--blue-bg); color: var(--blue); }
+  .counter.done { background: var(--green-bg); color: var(--green); }
+  .actions { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .filters { display: flex; gap: 6px; }
+  .btn { border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+  .btn.on { color: var(--text); border-color: var(--text); }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+  .btn.danger { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .updated { font-size: 12px; color: var(--faint); }
+  main { padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); cursor: pointer; display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--border); transition: transform .08s; min-width: 0; }
+  .card:hover { transform: translateY(-1px); }
+  .card.needs_input { border-left-color: var(--amber); }
+  .card.working { border-left-color: var(--blue); }
+  .card.done { border-left-color: var(--green); }
+  .card.selected { outline: 2px solid var(--blue); }
+  .card.shell-card { background: var(--term-bg); color: var(--term-fg); border-color: var(--term-bg); border-left-color: #5c6370; }
+  .card.shell-card .branch, .card.shell-card .hint { color: #8b929c; }
+  .top { display: flex; align-items: flex-start; gap: 10px; }
+  .name { font-weight: 650; font-size: 15px; word-break: break-all; }
+  .branch { font-family: var(--mono); font-size: 12px; color: var(--muted); word-break: break-all; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .badge { margin-left: auto; flex-shrink: 0; font-size: 11px; font-weight: 650; padding: 3px 8px; border-radius: 999px; background: var(--grey-bg); color: var(--muted); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .badge.needs_input { background: var(--amber-bg); color: var(--amber); }
+  .badge.working { background: var(--blue-bg); color: var(--blue); }
+  .badge.done { background: var(--green-bg); color: var(--green); }
+  .badge.shell { background: #262b33; color: #c5c8cd; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .working .dot { animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { .working .dot { animation: none; } .card { transition: none; } }
+  .task { font-size: 13px; background: var(--surface-2); border-radius: 8px; padding: 8px 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .message { font-size: 13px; color: var(--amber); font-weight: 550; }
+  .action { font-size: 12px; color: var(--muted); display: flex; gap: 6px; min-width: 0; }
+  .action .tool { font-weight: 650; color: var(--text); flex-shrink: 0; }
+  .action .detail { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; align-items: center; }
+  .chip { padding: 2px 8px; border-radius: 6px; background: var(--surface-2); color: var(--muted); }
+  .chip.live { background: var(--blue-bg); color: var(--blue); }
+  .plus { color: var(--add); } .minus { color: var(--del); }
+  .card-close { margin-left: auto; border: 0; background: none; color: var(--faint); font-size: 12px; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+  .card-close:hover { color: var(--red); background: var(--red-bg); }
+  .commit { font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 60px 0; }
+
+  aside { position: fixed; top: 0; right: 0; bottom: 0; width: min(960px, 100vw); background: var(--surface); border-left: 1px solid var(--border); box-shadow: -8px 0 24px rgba(0,0,0,.12); transform: translateX(100%); transition: transform .18s; display: flex; flex-direction: column; z-index: 10; }
+  aside.open { transform: none; }
+  .panel-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: flex-start; }
+  .panel-head .close { margin-left: auto; border: 0; background: var(--surface-2); color: var(--text); border-radius: 8px; width: 30px; height: 30px; cursor: pointer; font-size: 16px; flex-shrink: 0; }
+  .head-end { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .head-end .badge, .head-end .close { margin-left: 0; }
+  .app-btn { border: 1px solid var(--border); background: var(--grey-bg); color: var(--muted); border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 650; cursor: pointer; display: inline-flex; gap: 7px; align-items: center; white-space: nowrap; }
+  .app-btn.stopped { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .app-btn.building, .app-btn.starting { background: var(--amber-bg); border-color: var(--amber-bg); color: var(--amber); }
+  .app-btn.building .dot, .app-btn.starting .dot { animation: pulse 1.2s infinite; }
+  .app-btn.up { background: var(--green-bg); border-color: var(--green-bg); color: var(--green); }
+  .app-btn.degraded { background: var(--green-bg); border-color: var(--amber); color: var(--amber); }
+  .app-info .reason.warn { color: var(--amber); }
+  .app-btn.ko { background: var(--red-bg); border-color: var(--red-bg); color: var(--red); }
+  .app-info { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .app-info .last { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 520px; }
+  .app-info .reason { color: var(--red); }
+  .app-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .app-actions a { font-size: 12px; color: var(--blue); }
+  @media (prefers-reduced-motion: reduce) { .app-btn .dot { animation: none !important; } }
+  .app-pane { padding: 12px 20px; border-bottom: 1px solid var(--border); }
+  .app-pane .app-info { margin-top: 0; }
+  .tab-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 6px; background: var(--faint); vertical-align: middle; }
+  .tab-dot.building, .tab-dot.starting { background: var(--amber); }
+  .tab-dot.up { background: var(--green); }
+  .tab-dot.degraded { background: var(--amber); }
+  .tab-dot.ko { background: var(--red); }
+  .tabs { display: flex; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--border); }
+  .tabs button { border: 0; background: none; color: var(--muted); font-weight: 600; padding: 10px 12px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs button.on { color: var(--text); border-bottom-color: var(--blue); }
+  .view { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .view[hidden] { display: none; }
+
+  .chat-bar { padding: 10px 20px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .chat-bar select { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; max-width: 100%; }
+  .awaiting { box-shadow: inset 3px 0 0 var(--amber); }
+  .awaiting-note { align-self: flex-start; max-width: 92%; font-size: 12.5px; color: var(--amber); border-left: 3px solid var(--amber); padding: 2px 0 2px 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .awaiting-note button { border: 0; background: none; color: var(--blue); font-size: 12.5px; cursor: pointer; padding: 0; text-decoration: underline; }
+  .chat { flex: 1; overflow: auto; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 82%; padding: 10px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.55; overflow-wrap: anywhere; min-width: 0; }
+  .msg.user { align-self: flex-end; background: var(--blue-bg); border-bottom-right-radius: 4px; white-space: pre-wrap; }
+  .msg.assistant { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
+  .msg .when { display: block; font-size: 11px; color: var(--faint); margin-top: 4px; }
+  .msg p { margin: 0 0 8px; } .msg p:last-child { margin-bottom: 0; }
+  .msg pre { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; overflow-x: auto; font: 12px/1.5 var(--mono); margin: 6px 0; white-space: pre; }
+  .msg code { font: 12px var(--mono); background: var(--surface); padding: 1px 4px; border-radius: 4px; }
+  .msg pre code { background: none; padding: 0; }
+  .msg h4 { margin: 10px 0 4px; font-size: 13.5px; }
+  .msg ul { margin: 4px 0 8px; padding-left: 18px; }
+  .tool { align-self: flex-start; max-width: 92%; font-size: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); min-width: 0; }
+  .tool summary { cursor: pointer; padding: 5px 10px; display: flex; gap: 8px; list-style: none; color: var(--muted); min-width: 0; }
+  .tool summary::-webkit-details-marker { display: none; }
+  .tool summary b { color: var(--text); flex-shrink: 0; }
+  .tool summary span { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tool.error summary b { color: var(--del); }
+  .tool pre { margin: 0; border-top: 1px solid var(--border); padding: 8px 10px; max-height: 320px; overflow: auto; font: 11.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
+  .composer { border-top: 1px solid var(--border); padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .composer-row { display: flex; gap: 8px; align-items: flex-end; }
+  .composer textarea { flex: 1; min-height: 44px; max-height: 220px; resize: vertical; font: 13.5px/1.45 inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .composer textarea:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
+  .composer .note { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .composer-foot { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .mode { margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--faint); }
+  .mode[hidden] { display: none; }
+  .mode select { font: inherit; color: var(--muted); background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 2px 4px; cursor: pointer; }
+  .mode select:disabled { opacity: .5; cursor: wait; }
+
+  .screen { flex: 1; margin: 0; overflow: auto; background: var(--term-bg); color: var(--term-fg); font: 12.5px/1.35 var(--mono); padding: 12px 14px; white-space: pre; outline: none; }
+  .screen:focus { box-shadow: inset 0 0 0 2px var(--blue); }
+  .term-bar { border-top: 1px solid var(--border); padding: 10px 20px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .term-bar .hint { margin-left: auto; }
+
+  .side-grid { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+  .side { border-right: 1px solid var(--border); overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 16px; }
+  .side h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin: 0 0 6px; }
+  .file { display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .file:hover { background: var(--surface-2); }
+  .file.active { background: var(--blue-bg); }
+  .code { font-family: var(--mono); font-size: 11px; font-weight: 700; width: 22px; color: var(--muted); }
+  .code.M { color: var(--amber); } .code.A, .code.U { color: var(--add); } .code.D { color: var(--del); }
+  .file .fpath { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; flex: 1; }
+  .file .fstat { font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+  .tl { font-size: 12px; display: grid; grid-template-columns: 44px 1fr; gap: 6px; }
+  .tl .when { color: var(--faint); font-variant-numeric: tabular-nums; }
+  .tl .what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .diff { overflow: auto; font-family: var(--mono); font-size: 12px; line-height: 1.5; }
+  .diff .line { white-space: pre; padding: 0 14px; }
+  .diff .add { background: var(--add-bg); color: var(--add); }
+  .diff .del { background: var(--del-bg); color: var(--del); }
+  .diff .hunk { color: var(--hunk); background: var(--surface-2); padding-top: 4px; padding-bottom: 4px; }
+  .diff .meta-line { color: var(--faint); }
+  .placeholder { color: var(--muted); padding: 40px; text-align: center; font-family: inherit; white-space: normal; }
+
+  dialog { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); padding: 0; width: min(560px, calc(100vw - 32px)); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(10,12,16,.45); }
+  dialog form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  dialog h2 { margin: 0; font-size: 16px; }
+  dialog label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+  dialog input[type="text"], dialog textarea { font: 13.5px/1.45 inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  dialog textarea { min-height: 110px; resize: vertical; }
+  dialog .check { flex-direction: row; align-items: center; gap: 8px; font-weight: 500; color: var(--text); font-size: 13px; }
+  dialog .text { font-size: 13px; color: var(--muted); margin: 0; }
+  dialog .warn { font-size: 13px; color: var(--red); background: var(--red-bg); border-radius: 8px; padding: 8px 10px; margin: 0; }
+  dialog .warn[hidden] { display: none; }
+  dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 13px; z-index: 30; max-width: calc(100vw - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+  .toast.error { background: var(--red); color: #fff; }
+  .toast[hidden] { display: none; }
+
+  @media (max-width: 760px) {
+    header { padding: 12px 16px; } main { padding: 16px; grid-template-columns: 1fr; }
+    .actions { margin-left: 0; }
+    .side-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .side { border-right: 0; border-bottom: 1px solid var(--border); max-height: 40vh; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Worktrees</h1>
+  <div class="counters" id="counters"></div>
+  <div class="actions">
+    <div class="filters" id="filters">
+      <button class="btn" data-filter="active">Actifs</button>
+      <button class="btn" data-filter="all">Tous</button>
+    </div>
+    <button class="btn primary" id="new-btn">Nouvelle session</button>
+  </div>
+  <span class="updated" id="updated"></span>
+</header>
+<main id="grid"></main>
+
+<aside id="panel">
+  <div class="panel-head" id="panel-head"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <div class="view" id="chat-view">
+    <div class="chat-bar" id="chat-bar"></div>
+    <div class="chat" id="chat"></div>
+    <div class="composer" id="composer">
+      <div class="composer-row">
+        <textarea id="composer-input" placeholder="Écris à Claude… (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"></textarea>
+        <button class="btn primary" id="composer-send">Envoyer</button>
+      </div>
+      <div class="composer-foot">
+        <div class="note" id="composer-note"></div>
+        <label class="mode" id="mode-box" for="mode-select" hidden>Mode
+          <select id="mode-select">
+            <option value="default">Par défaut</option>
+            <option value="acceptEdits">Accepter les modifs</option>
+            <option value="plan">Plan</option>
+            <option value="auto">Auto</option>
+            <option value="bypass" disabled>Sans permissions</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="view" id="term-view" hidden>
+    <pre class="screen" id="screen" tabindex="0"></pre>
+    <div class="term-bar">
+      <button class="btn" data-key="Escape">Échap</button>
+      <button class="btn" data-key="C-c">Ctrl+C</button>
+      <button class="btn" data-key="BTab">Maj+Tab</button>
+      <button class="btn" data-key="Up">↑</button>
+      <button class="btn" data-key="Down">↓</button>
+      <button class="btn" data-key="Enter">Entrée</button>
+      <span class="hint">Clique sur l'écran pour taper au clavier. Le collage fonctionne aussi.</span>
+    </div>
+  </div>
+  <div class="view" id="app-view" hidden>
+    <div class="app-pane" id="app-pane"></div>
+    <pre class="screen" id="app-screen"></pre>
+    <div class="term-bar">
+      <button class="btn" data-key="C-c">Ctrl+C</button>
+      <span class="hint">Logs du build lancé à la racine du repo (session tmux cw-app).</span>
+    </div>
+  </div>
+  <div class="view" id="changes-view" hidden>
+    <div class="side-grid">
+      <div class="side" id="side"></div>
+      <div class="diff" id="diff"><div class="placeholder">Choisis un fichier pour voir son diff</div></div>
+    </div>
+  </div>
+</aside>
+
+<dialog id="new-dialog">
+  <form id="new-form">
+    <h2>Nouvelle session Claude</h2>
+    <p class="text">La session tourne dans tmux : tu peux la suivre et lui écrire depuis le cockpit.</p>
+    <label for="new-worktree">Worktree (existant ou nouveau)
+      <input type="text" id="new-worktree" list="worktree-names" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,60}" placeholder="skl-1234-ma-feature" autocomplete="off">
+    </label>
+    <datalist id="worktree-names"></datalist>
+    <label for="new-prompt">Premier message (optionnel)
+      <textarea id="new-prompt" placeholder="Ce que Claude doit faire"></textarea>
+    </label>
+    <div class="buttons">
+      <button type="button" class="btn" data-dismiss>Annuler</button>
+      <button type="submit" class="btn primary" id="new-submit">Lancer</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="close-dialog">
+  <form id="close-form">
+    <h2 id="close-title">Fermer le worktree</h2>
+    <p class="text" id="close-text"></p>
+    <p class="warn" id="close-warn" hidden></p>
+    <label class="check" for="close-branch"><input type="checkbox" id="close-branch"> Supprimer aussi la branche (refusé si elle n'est pas mergée)</label>
+    <div class="buttons">
+      <button type="button" class="btn" data-dismiss>Annuler</button>
+      <button type="submit" class="btn danger" id="close-submit">Fermer le worktree</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+  const STATUS = {
+    needs_input: { label: 'Attend ta réponse', rank: 0 },
+    working: { label: 'En cours', rank: 1 },
+    done: { label: 'Terminé', rank: 2 },
+    idle: { label: 'Session ouverte', rank: 3 },
+    ended: { label: 'Session fermée', rank: 4 },
+    none: { label: 'Pas de session', rank: 5 },
+  };
+  const STALE_MS = 30 * 60 * 1000;
+  const SHELL = 'shell';
+  const APP = 'app';
+  const APP_STATUS = {
+    stopped: { label: "Lancer l'app", hint: "L'app ne tourne pas. Clique pour lancer le build à la racine du repo." },
+    building: { label: 'Build en cours', hint: 'Build en cours dans tmux (cw-app). Clique pour suivre les logs.' },
+    starting: { label: 'Démarrage', hint: 'Build terminé, les process démarrent. Clique pour le détail.' },
+    up: { label: 'App up', hint: "L'app répond. Clique pour le détail." },
+    degraded: { label: 'App up · alertes', hint: "L'app répond, mais des process ont un problème. Clique pour le détail." },
+    ko: { label: 'App KO', hint: "Le build ou un process a échoué. Clique pour voir les logs et relancer." },
+  };
+  const KEYMAP = { Enter: 'Enter', Escape: 'Escape', Backspace: 'BSpace', Tab: 'Tab', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Delete: 'DC', Home: 'Home', End: 'End', PageUp: 'PPage', PageDown: 'NPage' };
+  const ANSI16 = ['#2a2e35', '#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#d6d9de', '#5c6370', '#ff7b86', '#b5e08f', '#f2d48f', '#8cc4ff', '#dda0f0', '#7fd6e0', '#ffffff'];
+
+  let state = null;
+  let filter = localGet('filter') || 'active';
+  let tab = localGet('tab') || 'chat';
+  let selected = null;
+  let selectedFile = null;
+  let chatSession = null;
+  let chatSignature = null;
+  let chatBarSignature = null;
+  let pendingSelect = null;
+  let closing = null;
+  let pendingOps = [];
+  let flushTimer = null;
+  let toastTimer = null;
+
+  function localGet(key) { try { return localStorage.getItem(key); } catch { return null; } }
+  function localSet(key, value) { try { localStorage.setItem(key, value); } catch {} }
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const urlToken = new URLSearchParams(location.search).get('token');
+  if (urlToken) { localSet('token', urlToken); history.replaceState(null, '', location.pathname); }
+  const token = urlToken || localGet('token') || '';
+
+  function api(url, options = {}) {
+    return fetch(url, { ...options, headers: { ...(options.headers || {}), 'X-Cockpit-Token': token } });
+  }
+
+  async function post(url, body) {
+    try {
+      const res = await api(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Cockpit': '1' }, body: JSON.stringify(body) });
+      let data = {};
+      try { data = await res.json(); } catch {}
+      return { ok: res.ok, status: res.status, data };
+    } catch {
+      return { ok: false, status: 0, data: { error: 'Serveur injoignable.' } };
+    }
+  }
+
+  function toast(message, kind) {
+    const el = $('toast');
+    el.textContent = message;
+    el.className = `toast ${kind || ''}`;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (el.hidden = true), kind === 'error' ? 6000 : 3500);
+  }
+
+  function ago(ts) {
+    if (!ts) return '';
+    const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (s < 60) return `${s}s`;
+    if (s < 3600) return `${Math.round(s / 60)} min`;
+    if (s < 86400) return `${Math.round(s / 3600)} h`;
+    return `${Math.round(s / 86400)} j`;
+  }
+
+  function color256(n) {
+    if (n < 16) return ANSI16[n];
+    if (n < 232) { const v = [0, 95, 135, 175, 215, 255]; n -= 16; return `rgb(${v[Math.floor(n / 36)]},${v[Math.floor(n / 6) % 6]},${v[n % 6]})`; }
+    const g = 8 + 10 * (n - 232);
+    return `rgb(${g},${g},${g})`;
+  }
+
+  function ansiToHtml(text) {
+    const clean = text.replace(/\x1b\][^\x07\x1b]*(\x07|\x1b\\)/g, '').replace(/\x1b\[[0-9;?]*[A-Za-ln-z]/g, '');
+    const re = /\x1b\[([0-9;]*)m/g;
+    let st = {};
+    let out = '';
+    let last = 0;
+    let m;
+    const flush = (chunk) => {
+      if (!chunk) return;
+      let fg = st.fg;
+      let bg = st.bg;
+      if (st.inverse) [fg, bg] = [bg || 'var(--term-bg)', fg || 'var(--term-fg)'];
+      const css = [fg && `color:${fg}`, bg && `background:${bg}`, st.bold && 'font-weight:700', st.dim && 'opacity:.6', st.italic && 'font-style:italic', st.underline && 'text-decoration:underline'].filter(Boolean).join(';');
+      out += css ? `<span style="${css}">${esc(chunk)}</span>` : esc(chunk);
+    };
+    while ((m = re.exec(clean))) {
+      flush(clean.slice(last, m.index));
+      last = re.lastIndex;
+      const codes = (m[1] || '0').split(';').map(Number);
+      for (let i = 0; i < codes.length; i++) {
+        const c = codes[i];
+        if (c === 0) st = {};
+        else if (c === 1) st.bold = true;
+        else if (c === 2) st.dim = true;
+        else if (c === 3) st.italic = true;
+        else if (c === 4) st.underline = true;
+        else if (c === 7) st.inverse = true;
+        else if (c === 22) { st.bold = false; st.dim = false; }
+        else if (c === 23) st.italic = false;
+        else if (c === 24) st.underline = false;
+        else if (c === 27) st.inverse = false;
+        else if (c >= 30 && c <= 37) st.fg = ANSI16[c - 30];
+        else if (c === 39) st.fg = null;
+        else if (c >= 40 && c <= 47) st.bg = ANSI16[c - 40];
+        else if (c === 49) st.bg = null;
+        else if (c >= 90 && c <= 97) st.fg = ANSI16[c - 82];
+        else if (c >= 100 && c <= 107) st.bg = ANSI16[c - 92];
+        else if (c === 38 || c === 48) {
+          const key = c === 38 ? 'fg' : 'bg';
+          if (codes[i + 1] === 5) { st[key] = color256(codes[i + 2]); i += 2; }
+          else if (codes[i + 1] === 2) { st[key] = `rgb(${codes[i + 2]},${codes[i + 3]},${codes[i + 4]})`; i += 4; }
+        }
+      }
+    }
+    flush(clean.slice(last));
+    return out;
+  }
+
+  function md(text) {
+    const inline = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    return text.split(/```[^\n]*\n?/).map((part, i) => {
+      if (i % 2) return `<pre><code>${esc(part.replace(/\n$/, ''))}</code></pre>`;
+      return part.split(/\n{2,}/).map((block) => {
+        const lines = block.split('\n').filter((l) => l.trim());
+        if (!lines.length) return '';
+        if (lines.every((l) => /^\s*([-*]|\d+\.)\s/.test(l))) return `<ul>${lines.map((l) => `<li>${inline(l.replace(/^\s*([-*]|\d+\.)\s/, ''))}</li>`).join('')}</ul>`;
+        if (/^#{1,6}\s/.test(lines[0])) return `<h4>${inline(lines[0].replace(/^#+\s/, ''))}</h4>${lines.length > 1 ? `<p>${lines.slice(1).map(inline).join('<br>')}</p>` : ''}`;
+        return `<p>${lines.map(inline).join('<br>')}</p>`;
+      }).join('');
+    }).join('');
+  }
+
+  function sessionStatus(wt) {
+    const s = wt.sessions[0];
+    if (!s) return 'none';
+    if (s.status === 'working' && Date.now() - s.updatedAt > STALE_MS) return 'idle';
+    return s.status || 'idle';
+  }
+
+  function isActive(wt) {
+    const st = sessionStatus(wt);
+    return wt.files.length > 0 || wt.ahead > 0 || ['needs_input', 'working', 'done'].includes(st) || wt.sessions.some((s) => s.live);
+  }
+
+  function sorted(list) {
+    return [...list].sort((a, b) => {
+      const ra = STATUS[sessionStatus(a)].rank, rb = STATUS[sessionStatus(b)].rank;
+      if (ra !== rb) return ra - rb;
+      const ta = a.sessions[0]?.updatedAt || a.lastCommit?.at || 0;
+      const tb = b.sessions[0]?.updatedAt || b.lastCommit?.at || 0;
+      return tb - ta;
+    });
+  }
+
+  const currentWt = () => (selected && selected !== SHELL ? state?.worktrees.find((w) => w.path === selected) : null);
+  const currentSession = () => currentWt()?.sessions.find((s) => s.sessionId === chatSession) || null;
+  const termTarget = () => (tab === 'app' ? APP : selected === SHELL ? SHELL : chatSession);
+  const termAvailable = () => (tab === 'app' ? !!state?.app?.build : selected === SHELL || !!currentSession()?.live);
+
+  function duration(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')}`;
+  }
+
+  function appButton() {
+    if (!state.app) return '';
+    const app = state.app;
+    const meta = APP_STATUS[app.state] || APP_STATUS.stopped;
+    const elapsed = app.state === 'building' && app.build ? ` · ${duration(Date.now() - app.build.startedAt)}` : '';
+    return `<button class="app-btn ${esc(app.state)}" id="app-btn" title="${esc(app.reason || meta.hint)}"><span class="dot"></span>${meta.label}${elapsed}</button>`;
+  }
+
+  const headEnd = (extra = '') => `<div class="head-end">${extra}${appButton()}<button class="close" id="close" title="Fermer">×</button></div>`;
+
+  function appPane() {
+    if (!state.app) return '';
+    const app = state.app;
+    const main = state.worktrees.find((w) => w.name === 'main');
+    const online = app.processes.filter((p) => p.status === 'online').length;
+    const lines = [];
+    if (app.state === 'degraded') (app.warnings || []).forEach((w) => lines.push(`<div class="reason warn">${esc(w)}</div>`));
+    else if (app.reason) lines.push(`<div class="reason">${esc(app.reason)}</div>`);
+    if (app.processes.length) lines.push(`<div>pm2 : ${online}/${app.processes.length} process en ligne</div>`);
+    if (app.recoveryDoc && ['ko', 'degraded'].includes(app.state)) lines.push(`<div>Dépannage : <code>${esc(app.recoveryDoc)}</code></div>`);
+    if (app.build?.lastLine && app.state === 'building') lines.push(`<div class="last">${esc(app.build.lastLine)}</div>`);
+    const running = app.state !== 'stopped';
+    const actions = [
+      app.state === 'building' ? '' : `<button class="btn primary" data-app="${running ? 'restart' : 'start'}">${running ? 'Relancer' : 'Lancer'}</button>`,
+      running ? '<button class="btn" data-app="stop">Arrêter</button>' : '',
+      ['up', 'degraded', 'starting'].includes(app.state) ? `<a href="${esc(app.link)}" target="_blank" rel="noopener">Ouvrir l'app ↗</a>` : '',
+    ].join('');
+    return `<div class="app-info">
+        <div class="branch">App lancée depuis ${esc(state.repo)} · branche ${esc(main?.branch || '?')}</div>
+        ${lines.join('')}<div class="app-actions">${actions}</div>
+      </div>`;
+  }
+
+  async function appAction(action) {
+    if (action === 'stop' && !confirm(`Arrêter l'app${state.app?.usesPm2 ? ' (pm2 delete all)' : ''} ?`)) return;
+    const result = await post(action === 'stop' ? '/api/app/stop' : '/api/app/start', { restart: action === 'restart' });
+    if (!result.ok) { toast(result.data.error || 'Action impossible.', 'error'); return; }
+    toast(action === 'stop' ? 'App arrêtée.' : 'Build lancé à la racine du repo.');
+    setTimeout(refresh, 800);
+  }
+
+  function renderCounters() {
+    const count = (st) => state.worktrees.filter((w) => sessionStatus(w) === st).length;
+    const dirty = state.worktrees.filter((w) => w.files.length).length;
+    $('counters').innerHTML = [
+      ['needs', count('needs_input'), 'attendent ta réponse'],
+      ['working', count('working'), 'en cours'],
+      ['done', count('done'), 'terminées'],
+      ['', dirty, 'avec changements'],
+    ].map(([cls, n, label]) => `<span class="counter ${n ? cls : ''}">${n} ${label}</span>`).join('');
+    $('updated').textContent = `${state.worktrees.length} worktrees · mis à jour ${new Date(state.generatedAt).toLocaleTimeString()}`;
+    $('worktree-names').innerHTML = state.worktrees.filter((w) => w.name !== 'main').map((w) => `<option value="${esc(w.name)}">`).join('');
+  }
+
+  function shellCard() {
+    const live = state.shell?.live;
+    return `<div class="card shell-card ${selected === SHELL ? 'selected' : ''}" data-shell="1">
+      <div class="top">
+        <div><div class="name">Terminal</div><div class="branch">bash · ${esc(state.repo)}</div></div>
+        <span class="badge shell"><span class="dot"></span>${live ? 'Ouvert' : 'Démarre au clic'}</span>
+      </div>
+      <div class="hint">Session tmux persistante, indépendante des worktrees. Elle survit à la fermeture de la page.</div>
+    </div>`;
+  }
+
+  function card(wt) {
+    const st = sessionStatus(wt);
+    const s = wt.sessions[0];
+    const last = s?.actions?.[0];
+    const meta = [];
+    if (wt.sessions.some((x) => x.live)) meta.push('<span class="chip live">⌨ pilotable</span>');
+    if (wt.files.length) meta.push(`<span class="chip">✎ ${wt.files.length} fichier${wt.files.length > 1 ? 's' : ''}</span>`);
+    if (wt.added || wt.deleted) meta.push(`<span class="chip"><span class="plus">+${wt.added}</span> <span class="minus">−${wt.deleted}</span></span>`);
+    if (wt.ahead) meta.push(`<span class="chip">↑ ${wt.ahead} non poussé${wt.ahead > 1 ? 's' : ''}</span>`);
+    if (wt.behind) meta.push(`<span class="chip">↓ ${wt.behind}</span>`);
+    if (!wt.files.length && !wt.ahead) meta.push('<span class="chip">✓ propre</span>');
+    if (wt.locked) meta.push('<span class="chip">🔒 verrouillé</span>');
+    if (wt.name !== 'main' && !wt.locked) meta.push(`<button class="card-close" data-close="${esc(wt.path)}" title="Fermer ce worktree">Fermer</button>`);
+    return `<div class="card ${st} ${selected === wt.path ? 'selected' : ''}" data-path="${esc(wt.path)}">
+      <div class="top">
+        <div><div class="name">${esc(wt.name)}</div><div class="branch">${esc(wt.branch || 'HEAD détachée')}</div></div>
+        <span class="badge ${st}"><span class="dot"></span>${STATUS[st].label}${s ? ` · ${ago(s.updatedAt)}` : ''}</span>
+      </div>
+      ${s?.task ? `<div class="task">${esc(s.task)}</div>` : ''}
+      ${st === 'needs_input' && s.message ? `<div class="message">${esc(s.message)}</div>` : ''}
+      ${st === 'working' && last ? `<div class="action"><span class="tool">${esc(last.tool)}</span><span class="detail">${esc(last.detail)}</span></div>` : ''}
+      <div class="meta">${meta.join('')}</div>
+      ${wt.lastCommit ? `<div class="commit">${esc(wt.lastCommit.subject)} · ${ago(wt.lastCommit.at)}</div>` : ''}
+    </div>`;
+  }
+
+  function renderGrid() {
+    const list = sorted(filter === 'active' ? state.worktrees.filter(isActive) : state.worktrees);
+    $('grid').innerHTML = shellCard() + (list.length ? list.map(card).join('') : '<div class="empty">Aucun worktree actif</div>');
+    document.querySelectorAll('#filters button').forEach((b) => b.classList.toggle('on', b.dataset.filter === filter));
+  }
+
+  function renderTabs() {
+    const tabs = selected === SHELL ? [['term', 'Terminal']] : [['chat', 'Conversation'], ['term', 'Terminal'], ['changes', 'Changements']];
+    if (state.app) tabs.push(['app', `App<span class="tab-dot ${esc(state.app.state)}"></span>`]);
+    if (!tabs.some(([id]) => id === tab)) tab = tabs[0][0];
+    $('tabs').innerHTML = tabs.map(([id, label]) => `<button data-tab="${id}" class="${id === tab ? 'on' : ''}">${label}</button>`).join('');
+    $('chat-view').hidden = tab !== 'chat';
+    $('term-view').hidden = tab !== 'term';
+    $('changes-view').hidden = tab !== 'changes';
+    $('app-view').hidden = tab !== 'app';
+  }
+
+  function renderPanel() {
+    const panel = $('panel');
+    const wt = currentWt();
+    const open = selected === SHELL || !!wt;
+    panel.classList.toggle('open', open);
+    if (!open) return;
+    renderTabs();
+    $('app-pane').innerHTML = appPane();
+    if (selected === SHELL) {
+      $('panel-head').innerHTML = `<div><div class="name">Terminal</div><div class="branch">bash · ${esc(state.repo)} · session tmux cw-shell</div></div>${headEnd()}`;
+      return;
+    }
+    if (!chatSession || !wt.sessions.some((x) => x.sessionId === chatSession)) chatSession = wt.sessions[0]?.sessionId || null;
+    const st = sessionStatus(wt);
+    const s = currentSession();
+    $('panel-head').innerHTML = `
+      <div><div class="name">${esc(wt.name)}</div><div class="branch">${esc(wt.branch || 'HEAD détachée')} · ${esc(wt.path)}</div></div>
+      ${headEnd(`<span class="badge ${st}"><span class="dot"></span>${STATUS[st].label}</span>`)}`;
+    renderChatBar(wt);
+    renderComposer(s);
+    updateMode();
+    const files = wt.files.map((f) => {
+      const code = f.code === '??' ? 'U' : f.code.replace('.', '').charAt(0);
+      const stat = f.added || f.deleted ? `<span class="fstat"><span class="plus">+${f.added || 0}</span> <span class="minus">−${f.deleted || 0}</span></span>` : '';
+      return `<div class="file ${selectedFile === f.path ? 'active' : ''}" data-file="${esc(f.path)}"><span class="code ${code}">${code}</span><span class="fpath">&lrm;${esc(f.path)}</span>${stat}</div>`;
+    }).join('') || '<div class="tl"><span></span><span class="what">Aucun changement</span></div>';
+    $('side').innerHTML = `
+      ${s?.task ? `<div><h3>Tâche</h3><div class="task" style="-webkit-line-clamp: 8">${esc(s.task)}</div></div>` : ''}
+      <div><h3>Fichiers modifiés</h3>${files}</div>`;
+  }
+
+  function renderChatBar(wt) {
+    const signature = `${wt.path}|${wt.sessions.map((s) => `${s.sessionId}:${s.live}`).join(',')}|${chatSession}`;
+    if (signature === chatBarSignature) return;
+    chatBarSignature = signature;
+    if (!wt.sessions.length) { $('chat-bar').innerHTML = 'Aucune session suivie pour ce worktree.'; return; }
+    const options = wt.sessions.map((s) => `<option value="${esc(s.sessionId)}" ${s.sessionId === chatSession ? 'selected' : ''}>${s.live ? '⌨ ' : ''}${esc((s.task || 'Session sans prompt').slice(0, 70))} · ${ago(s.updatedAt)}</option>`).join('');
+    $('chat-bar').innerHTML = `<label for="session-select">Session</label><select id="session-select">${options}</select>`;
+  }
+
+  function renderComposer(s) {
+    const live = !!s?.live;
+    $('composer-input').disabled = !live;
+    $('composer-send').disabled = !live;
+    if (live) $('composer-note').innerHTML = 'Le message est tapé dans la session tmux, comme si tu étais dans le terminal.';
+    else if (s) $('composer-note').innerHTML = `Cette session ne tourne pas dans tmux : lecture seule. <button class="btn" id="resume-btn">Reprendre dans le cockpit</button>`;
+    else $('composer-note').innerHTML = 'Lance une session avec « Nouvelle session » pour écrire à Claude depuis ici.';
+  }
+
+  let modeBusy = false;
+
+  function modeFromScreen(text) {
+    const tail = text.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').split('\n').slice(-8).join('\n').toLowerCase();
+    if (tail.includes('auto mode on')) return 'auto';
+    if (tail.includes('accept edits on')) return 'acceptEdits';
+    if (tail.includes('plan mode on')) return 'plan';
+    if (tail.includes('bypass permissions on')) return 'bypass';
+    return 'default';
+  }
+
+  async function readMode(target) {
+    const res = await api(`/api/screen?target=${encodeURIComponent(target)}`).catch(() => null);
+    if (!res || !res.ok) return null;
+    return modeFromScreen(await res.text());
+  }
+
+  async function updateMode() {
+    const s = currentSession();
+    $('mode-box').hidden = !s?.live;
+    if (!s?.live || modeBusy) return;
+    const mode = await readMode(s.sessionId);
+    if (mode && !modeBusy) $('mode-select').value = mode;
+  }
+
+  async function setMode(target) {
+    const s = currentSession();
+    if (!s?.live) return;
+    modeBusy = true;
+    $('mode-select').disabled = true;
+    for (let i = 0; i < 6; i++) {
+      if ((await readMode(s.sessionId)) === target) break;
+      await post('/api/keys', { target: s.sessionId, ops: [{ key: 'BTab' }] });
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+    const final = await readMode(s.sessionId);
+    $('mode-select').value = final || target;
+    $('mode-select').disabled = false;
+    modeBusy = false;
+    if (final !== target) toast("Ce mode n'est pas accessible avec Maj+Tab dans cette session.", 'error');
+  }
+
+  async function loadChat(force) {
+    const box = $('chat');
+    if (!chatSession) { box.innerHTML = '<div class="placeholder">Les conversations apparaissent ici dès qu\'une session Claude démarre dans ce worktree.</div>'; chatSignature = null; return; }
+    let chat;
+    try {
+      const res = await api(`/api/chat?session=${encodeURIComponent(chatSession)}`);
+      if (!res.ok) { box.innerHTML = '<div class="placeholder">Transcript introuvable pour cette session.</div>'; chatSignature = null; return; }
+      chat = await res.json();
+    } catch { return; }
+    const last = chat.items[chat.items.length - 1];
+    const session = currentSession();
+    const awaiting = session?.status === 'needs_input' ? session.message || 'Claude attend ta réponse' : null;
+    const signature = `${chat.sessionId}|${chat.total}|${last ? (last.result || last.text || '').length : 0}|${awaiting}`;
+    if (!force && signature === chatSignature) return;
+    chatSignature = signature;
+    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    const opened = new Set([...box.querySelectorAll('details.tool[open]')].map((d) => d.dataset.index));
+    const time = (at) => (at ? new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
+    const lastIndex = chat.items.length - 1;
+    box.innerHTML = (chat.total > chat.items.length ? `<div class="placeholder">${chat.total - chat.items.length} éléments plus anciens masqués</div>` : '') + chat.items.map((item, i) => {
+      const mark = awaiting && i === lastIndex ? 'awaiting' : '';
+      if (item.kind === 'user') return `<div class="msg user ${mark}">${esc(item.text)}<span class="when">${time(item.at)}</span></div>`;
+      if (item.kind === 'assistant') return `<div class="msg assistant ${mark}">${md(item.text)}<span class="when">${time(item.at)}</span></div>`;
+      return `<details class="tool ${item.error ? 'error' : ''} ${mark}" data-index="${i}" ${opened.has(String(i)) ? 'open' : ''}><summary><b>${esc(item.tool)}</b><span>${esc(item.detail)}</span></summary>${item.result ? `<pre>${esc(item.result)}</pre>` : ''}</details>`;
+    }).join('') + (awaiting ? `<div class="awaiting-note">${esc(awaiting)}${session.live ? ' · <button data-goto="term">Répondre dans le terminal</button>' : ''}</div>` : '');
+    if (nearBottom || force) box.scrollTop = box.scrollHeight;
+  }
+
+  async function loadScreen() {
+    const box = $(tab === 'app' ? 'app-screen' : 'screen');
+    if (!termAvailable() && tab === 'app') { box.innerHTML = '<div class="placeholder">Aucun build lancé depuis le cockpit. Les logs de la commande de lancement apparaîtront ici.</div>'; return; }
+    if (!termAvailable()) { box.innerHTML = '<div class="placeholder">Cette session ne tourne pas dans tmux. Reprends-la depuis l\'onglet Conversation pour obtenir un terminal.</div>'; return; }
+    const res = await api(`/api/screen?target=${encodeURIComponent(termTarget())}`).catch(() => null);
+    if (!res || !res.ok) return;
+    const text = await res.text();
+    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    box.innerHTML = ansiToHtml(text);
+    if (nearBottom) box.scrollTop = box.scrollHeight;
+  }
+
+  async function loadDiff() {
+    const box = $('diff');
+    if (!selectedFile) { box.innerHTML = '<div class="placeholder">Choisis un fichier pour voir son diff</div>'; return; }
+    const res = await api(`/api/diff?wt=${encodeURIComponent(selected)}&file=${encodeURIComponent(selectedFile)}`);
+    const text = await res.text();
+    box.innerHTML = text.split('\n').map((l) => {
+      const cls = l.startsWith('@@') ? 'hunk' : /^(diff |index |--- |\+\+\+ |new file|deleted file)/.test(l) ? 'meta-line' : l.startsWith('+') ? 'add' : l.startsWith('-') ? 'del' : '';
+      return `<div class="line ${cls}">${esc(l) || ' '}</div>`;
+    }).join('') || '<div class="placeholder">Pas de diff</div>';
+  }
+
+  async function refresh() {
+    try {
+      const res = await api('/api/state');
+      if (res.status === 401) { $('updated').textContent = 'accès refusé : ouvre l’URL avec ?token= affichée par start.sh'; return; }
+      state = await res.json();
+    } catch {
+      $('updated').textContent = 'serveur injoignable';
+      return;
+    }
+    if (pendingSelect) {
+      const wt = state.worktrees.find((w) => w.name === pendingSelect && w.sessions.some((s) => s.live));
+      if (wt) { select(wt.path); pendingSelect = null; }
+    }
+    if (selected && selected !== SHELL && !currentWt()) selected = null;
+    renderCounters(); renderGrid(); renderPanel();
+    if (currentWt() && tab === 'chat') loadChat(false);
+  }
+
+  function select(target) {
+    selected = target; selectedFile = null; chatSession = null; chatSignature = null; chatBarSignature = null;
+    if (target === SHELL && tab !== 'app') tab = 'term';
+    renderGrid(); renderPanel();
+    if (tab === 'app') loadScreen();
+    if (target !== SHELL) { loadDiff(); if (tab === 'chat') loadChat(true); }
+    if (tab === 'term') { loadScreen(); $('screen').focus(); }
+  }
+
+  function closePanel() { selected = null; selectedFile = null; renderGrid(); renderPanel(); }
+
+  function queueOp(op) {
+    const last = pendingOps[pendingOps.length - 1];
+    if (op.literal && last && last.literal) last.literal += op.literal;
+    else pendingOps.push(op);
+    clearTimeout(flushTimer);
+    flushTimer = setTimeout(flushOps, 40);
+  }
+
+  async function flushOps() {
+    const ops = pendingOps;
+    pendingOps = [];
+    if (!ops.length) return;
+    const result = await post('/api/keys', { target: termTarget(), ops });
+    if (!result.ok) toast(result.data.error || 'Envoi impossible.', 'error');
+    setTimeout(loadScreen, 120);
+  }
+
+  async function sendKey(key) {
+    const op = /^\d$/.test(key) ? { literal: key } : { key };
+    const result = await post('/api/keys', { target: termTarget(), ops: [op] });
+    if (!result.ok) toast(result.data.error || 'Envoi impossible.', 'error');
+    setTimeout(loadScreen, 250);
+  }
+
+  async function sendMessage() {
+    const input = $('composer-input');
+    const text = input.value.trim();
+    if (!text || !chatSession) return;
+    $('composer-send').disabled = true;
+    const result = await post('/api/send', { target: chatSession, text });
+    $('composer-send').disabled = false;
+    if (!result.ok) { toast(result.data.error || 'Envoi impossible.', 'error'); return; }
+    input.value = '';
+    setTimeout(() => { loadChat(true); refresh(); }, 900);
+  }
+
+  function openClose(wtPath) {
+    const wt = state.worktrees.find((w) => w.path === wtPath);
+    if (!wt) return;
+    closing = { path: wt.path, force: false };
+    $('close-title').textContent = `Fermer ${wt.name}`;
+    const live = wt.sessions.filter((s) => s.live).length;
+    $('close-text').textContent = `Le dossier ${wt.path} sera supprimé avec git worktree remove${live ? `, et ${live} session${live > 1 ? 's' : ''} Claude ouverte${live > 1 ? 's' : ''} dans tmux sera arrêtée` : ''}. La branche ${wt.branch || '(aucune)'} est conservée, sauf si tu coches la case.`;
+    $('close-warn').hidden = true;
+    $('close-branch').checked = false;
+    $('close-submit').textContent = 'Fermer le worktree';
+    $('close-dialog').showModal();
+  }
+
+  $('grid').addEventListener('click', (e) => {
+    const closeBtn = e.target.closest('[data-close]');
+    if (closeBtn) { e.stopPropagation(); openClose(closeBtn.dataset.close); return; }
+    const c = e.target.closest('.card');
+    if (!c) return;
+    select(c.dataset.shell ? SHELL : c.dataset.path);
+  });
+
+  $('panel').addEventListener('change', (e) => {
+    if (e.target.id === 'mode-select') { setMode(e.target.value); return; }
+    if (e.target.id !== 'session-select') return;
+    chatSession = e.target.value; chatBarSignature = null;
+    renderPanel(); loadChat(true);
+  });
+
+  $('panel').addEventListener('click', async (e) => {
+    if (e.target.id === 'close') { closePanel(); return; }
+    if (e.target.closest('#app-btn')) {
+      if ((state.app?.state || 'stopped') === 'stopped') await appAction('start');
+      tab = 'app'; localSet('tab', tab); renderTabs(); loadScreen();
+      return;
+    }
+    const appBtn = e.target.closest('[data-app]');
+    if (appBtn) { appAction(appBtn.dataset.app); return; }
+    if (e.target.id === 'composer-send') { sendMessage(); return; }
+    if (e.target.id === 'resume-btn') {
+      const result = await post('/api/resume', { session: chatSession });
+      toast(result.ok ? 'Session relancée dans tmux. Elle sera pilotable dans quelques secondes.' : result.data.error || 'Reprise impossible.', result.ok ? '' : 'error');
+      setTimeout(refresh, 2500);
+      return;
+    }
+    const tabBtn = e.target.closest('#tabs button');
+    if (tabBtn) {
+      tab = tabBtn.dataset.tab; localSet('tab', tab); renderTabs();
+      if (tab === 'chat') loadChat(true);
+      if (tab === 'term') { loadScreen(); $('screen').focus(); }
+      if (tab === 'app') loadScreen();
+      return;
+    }
+    const goto = e.target.closest('[data-goto]');
+    if (goto) { tab = goto.dataset.goto; renderTabs(); loadScreen(); $('screen').focus(); return; }
+    const keyBtn = e.target.closest('[data-key]');
+    if (keyBtn) { sendKey(keyBtn.dataset.key); return; }
+    const f = e.target.closest('.file[data-file]');
+    if (f) { selectedFile = f.dataset.file; renderPanel(); loadDiff(); }
+  });
+
+  $('composer-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendMessage(); }
+  });
+
+  $('screen').addEventListener('keydown', (e) => {
+    if (e.metaKey) return;
+    let op = null;
+    if (e.ctrlKey && /^[a-z]$/i.test(e.key)) op = { key: `C-${e.key.toLowerCase()}` };
+    else if (e.key === 'Tab' && e.shiftKey) op = { key: 'BTab' };
+    else if (KEYMAP[e.key]) op = { key: KEYMAP[e.key] };
+    else if (e.key.length === 1 && !e.ctrlKey && !e.altKey) op = { literal: e.key };
+    if (!op) return;
+    e.preventDefault();
+    e.stopPropagation();
+    queueOp(op);
+  });
+
+  $('screen').addEventListener('paste', async (e) => {
+    const text = e.clipboardData.getData('text');
+    if (!text) return;
+    e.preventDefault();
+    const result = await post('/api/paste', { target: termTarget(), text });
+    if (!result.ok) toast(result.data.error || 'Collage impossible.', 'error');
+    setTimeout(loadScreen, 150);
+  });
+
+  $('filters').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    filter = b.dataset.filter; localSet('filter', filter); renderGrid();
+  });
+
+  $('new-btn').addEventListener('click', () => { $('new-form').reset(); $('new-dialog').showModal(); $('new-worktree').focus(); });
+
+  document.querySelectorAll('dialog [data-dismiss]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
+
+  $('new-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const worktree = $('new-worktree').value.trim();
+    $('new-submit').disabled = true;
+    const result = await post('/api/start', { worktree, prompt: $('new-prompt').value });
+    $('new-submit').disabled = false;
+    if (!result.ok) { toast(result.data.error || 'Lancement impossible.', 'error'); return; }
+    $('new-dialog').close();
+    pendingSelect = worktree;
+    toast(`Session lancée dans tmux (${result.data.session}). Elle s'ouvre dès qu'elle a démarré.`);
+    setTimeout(refresh, 2500);
+  });
+
+  $('close-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!closing) return;
+    $('close-submit').disabled = true;
+    const result = await post('/api/close', { path: closing.path, force: closing.force, deleteBranch: $('close-branch').checked });
+    $('close-submit').disabled = false;
+    if (result.status === 409 && result.data.dirty) {
+      closing.force = true;
+      $('close-warn').textContent = 'Ce worktree a des changements non commités. Ils seront définitivement perdus si tu continues.';
+      $('close-warn').hidden = false;
+      $('close-submit').textContent = 'Supprimer quand même';
+      return;
+    }
+    if (!result.ok) { toast(result.data.error || 'Fermeture impossible.', 'error'); return; }
+    $('close-dialog').close();
+    if (selected === closing.path) closePanel();
+    toast(result.data.warning || 'Worktree fermé.', result.data.warning ? 'error' : '');
+    closing = null;
+    refresh();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !selected) return;
+    if (document.activeElement === $('screen') || document.querySelector('dialog[open]')) return;
+    closePanel();
+  });
+
+  refresh();
+  setInterval(refresh, 3000);
+  setInterval(() => { if ($('panel').classList.contains('open') && ['term', 'app'].includes(tab)) loadScreen(); }, 700);
+</script>
+</body>
+</html>

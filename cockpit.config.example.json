@@ -1,0 +1,12 @@
+{
+  "repo": "/path/to/your/repo",
+  "container": "",
+  "hosts": [],
+  "app": {
+    "command": "npm run dev",
+    "processManager": "",
+    "healthUrl": "http://localhost:3000",
+    "url": "http://localhost:3000",
+    "recoveryDoc": ""
+  }
+}

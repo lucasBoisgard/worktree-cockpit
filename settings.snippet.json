@@ -1,0 +1,76 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node /root/.claude/worktree-dashboard/statusline.js"
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /root/.claude/worktree-dashboard/hooks/worktree-state.js"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /root/.claude/worktree-dashboard/hooks/worktree-state.js"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /root/.claude/worktree-dashboard/hooks/worktree-state.js"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /root/.claude/worktree-dashboard/hooks/worktree-state.js"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/root/.claude/worktree-dashboard/ensure.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /root/.claude/worktree-dashboard/hooks/worktree-state.js"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /root/.claude/worktree-dashboard/hooks/worktree-state.js"
+          }
+        ]
+      }
+    ]
+  }
+}
