@@ -219,7 +219,7 @@
   .suggest .cmd-desc { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
   .suggest .cmd-tag { font-size: 11px; color: var(--faint); white-space: nowrap; }
   .composer-row { display: flex; gap: 8px; align-items: flex-end; }
-  .composer textarea { flex: 1; min-height: 44px; max-height: 220px; resize: vertical; font: 13.5px/1.45 inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .composer textarea { flex: 1; min-height: 44px; max-height: 220px; resize: vertical; font-family: inherit; font-size: 13.5px; line-height: 1.45; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
   .composer textarea:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
   .composer .note { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .composer-foot { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -327,7 +327,7 @@
   dialog form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
   dialog h2 { margin: 0; font-size: 16px; }
   dialog label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
-  dialog input[type="text"], dialog textarea { font: 13.5px/1.45 inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  dialog input[type="text"], dialog textarea { font-family: inherit; font-size: 13.5px; line-height: 1.45; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
   dialog textarea { min-height: 110px; resize: vertical; }
   dialog .check { flex-direction: row; align-items: center; gap: 8px; font-weight: 500; color: var(--text); font-size: 13px; }
   dialog .text { font-size: 13px; color: var(--muted); margin: 0; }
@@ -337,6 +337,150 @@
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 13px; z-index: 30; max-width: calc(100vw - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
   .toast.error { background: var(--red); color: #fff; }
   .toast[hidden] { display: none; }
+
+  .kanban { display: grid; grid-template-columns: repeat(4, minmax(300px, 1fr)); gap: 14px; overflow-x: auto; align-items: start; padding-bottom: 4px; }
+  .column { --c: var(--faint); background: var(--surface-2); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 10px; min-width: 0; border-top: 3px solid var(--c); }
+  .column.needs { --c: var(--amber); } .column.working { --c: var(--blue); } .column.review { --c: var(--green); }
+  .column > h2 { margin: 2px 4px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--c); display: flex; gap: 8px; align-items: baseline; }
+  .column > h2 .count { margin-left: auto; font-weight: 600; color: var(--muted); }
+  .column > p { margin: 0 4px; font-size: 12px; color: var(--muted); }
+  .column .empty-col { font-size: 12px; color: var(--faint); text-align: center; padding: 18px 0; border: 1px dashed var(--border); border-radius: 10px; }
+  h1 .repo { font: 600 12.5px var(--mono); color: var(--violet); background: var(--violet-bg); padding: 2px 8px; border-radius: 6px; margin-left: 8px; vertical-align: 2px; }
+  .repo-chip { font: 600 12px var(--mono); color: var(--violet); background: var(--violet-bg); padding: 2px 8px; border-radius: 6px; }
+  .ext-chip { font: 12px var(--mono); color: var(--amber); background: var(--amber-bg); padding: 2px 8px; border-radius: 6px; word-break: break-all; }
+  .msg a, .tool a, .screen a { color: var(--blue); text-decoration: underline; overflow-wrap: anywhere; }
+  .auto-state { font: 600 11px var(--mono); padding: 1px 6px; border-radius: 4px; }
+  .auto-state.never { background: var(--grey-bg); color: var(--muted); }
+  .auto-state.ran { background: var(--green-bg); color: var(--green); }
+  .auto-state.failed { background: var(--red-bg); color: var(--red); }
+  .auto-state.paused { background: var(--grey-bg); color: var(--faint); }
+  .notice { border-radius: 10px; padding: 10px 14px; font-size: 13px; background: var(--amber-bg); color: var(--amber); }
+  .card.needs_input { box-shadow: 0 0 0 2px var(--amber), var(--shadow); }
+  .card.focused { outline: 2px dashed var(--blue); outline-offset: 2px; }
+  .card .pin { border: 0; background: none; color: var(--faint); cursor: pointer; font-size: 15px; padding: 0 2px; line-height: 1; }
+  .card .pin.on { color: var(--amber); }
+  .card .pick { width: 16px; height: 16px; margin: 2px 0 0; cursor: pointer; flex-shrink: 0; }
+  .peek { font-size: 12.5px; color: var(--muted); background: var(--surface-2); border-radius: 8px; padding: 6px 10px; cursor: pointer; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; white-space: pre-wrap; }
+  .peek.open { -webkit-line-clamp: unset; }
+  .peek b { color: var(--text); font-weight: 600; }
+  .quick-keys { display: flex; gap: 6px; flex-wrap: wrap; }
+  .quick-keys .btn { font-size: 12px; }
+  .quick-keys .btn.allow { border-color: var(--green); color: var(--green); }
+  .quick-keys .btn.deny { border-color: var(--red); color: var(--red); }
+  .quick { display: flex; gap: 6px; }
+  .quick input { flex: 1; min-width: 0; font-family: inherit; font-size: 12.5px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; }
+  .card-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .card-actions .btn { font-size: 11.5px; padding: 3px 8px; }
+  .chip.pr { font-weight: 600; text-decoration: none; }
+  .chip.pr-open { background: var(--blue-bg); color: var(--blue); }
+  .chip.pr-ready { background: var(--green-bg); color: var(--green); }
+  .chip.pr-pending { background: var(--amber-bg); color: var(--amber); }
+  .chip.pr-failing, .chip.pr-changes { background: var(--red-bg); color: var(--red); }
+  .chip.pr-merged { background: var(--violet-bg); color: var(--violet); }
+  .chip.pr-draft, .chip.pr-closed { background: var(--grey-bg); color: var(--muted); }
+  .chip.queued { background: var(--violet-bg); color: var(--violet); }
+  .chip.served { background: var(--green-bg); color: var(--green); font-weight: 600; }
+  .chip.link { background: var(--grey-bg); color: var(--muted); }
+  .sub-title { margin: 4px 0 0; font-size: 11.5px; font-weight: 600; color: var(--faint); }
+  .archives summary { cursor: pointer; font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .archive-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13px; }
+  .archive-row .grow { flex: 1; min-width: 0; }
+  .archive-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .bell { position: relative; }
+  .bell .n { position: absolute; top: -6px; right: -6px; background: var(--red); color: #fff; border-radius: 999px; font-size: 10.5px; font-weight: 700; padding: 1px 5px; }
+  .bell .n[hidden] { display: none; }
+  .menu { position: relative; }
+  .menu > summary { list-style: none; }
+  .menu > summary::-webkit-details-marker { display: none; }
+  .menu-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(16,24,40,.18); padding: 4px; min-width: 220px; display: flex; flex-direction: column; }
+  .menu-list button { text-align: left; border: 0; background: none; color: var(--text); padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; gap: 12px; }
+  .menu-list button:hover { background: var(--surface-2); }
+  .menu-list kbd, .help kbd { font: 11px var(--mono); color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
+  dialog.wide { width: min(980px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+  dialog.wide form, dialog.wide .sheet { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .sheet-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .sheet-head h2 { margin: 0; font-size: 16px; }
+  .sheet-head .grow { flex: 1; }
+  .sheet-head input[type="search"] { flex: 1; min-width: 200px; font-family: inherit; font-size: 13.5px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; }
+  .list { display: flex; flex-direction: column; gap: 8px; overflow: auto; max-height: calc(100vh - 200px); }
+  .row { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; background: var(--surface); font-size: 13px; min-width: 0; }
+  .row.unread { border-left: 3px solid var(--blue); }
+  .row.clickable { cursor: pointer; }
+  .row.clickable:hover { background: var(--surface-2); }
+  .row .top-line { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .row .top-line .grow { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .meta-line { font-size: 12px; color: var(--muted); }
+  .row .snippet { font-size: 12px; color: var(--muted); font-family: var(--mono); overflow-wrap: anywhere; }
+  .row .actions-line { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ev-type { font: 600 11px var(--mono); padding: 1px 6px; border-radius: 4px; background: var(--grey-bg); color: var(--muted); }
+  .ev-type.needs_input, .ev-type.permission, .ev-type.question { background: var(--amber-bg); color: var(--amber); }
+  .ev-type.done, .ev-type.automation { background: var(--green-bg); color: var(--green); }
+  .ev-type.ci_failed, .ev-type.app_ko, .ev-type.automation_failed { background: var(--red-bg); color: var(--red); }
+  .ev-type.merged { background: var(--violet-bg); color: var(--violet); }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: var(--surface); color: var(--muted); padding: 4px 9px; font-size: 12px; cursor: pointer; }
+  .seg button.on { background: var(--blue-bg); color: var(--blue); font-weight: 600; }
+  .history-chat { display: flex; flex-direction: column; gap: 10px; overflow: auto; max-height: calc(100vh - 240px); padding: 4px; }
+  .table-scroll { overflow: auto; max-height: calc(100vh - 240px); border: 1px solid var(--border); border-radius: 10px; }
+  .cleanup-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .cleanup-table th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-size: 11px; color: var(--muted); padding: 7px 8px; }
+  .cleanup-table td { padding: 7px 8px; border-top: 1px solid var(--border); white-space: nowrap; }
+  .cleanup-table .bad { color: var(--red); font-weight: 600; }
+  .cleanup-table .ok { color: var(--green); }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .days-pick { display: flex; gap: 6px; flex-wrap: wrap; }
+  .days-pick label { flex-direction: row; align-items: center; gap: 4px; font-weight: 500; color: var(--text); }
+  dialog select, dialog input[type="number"], dialog input[type="time"] { font-family: inherit; font-size: 13.5px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; }
+  .palette-list { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow: auto; }
+  .palette-list button { text-align: left; border: 0; background: none; color: var(--text); padding: 7px 10px; border-radius: 6px; cursor: pointer; display: flex; gap: 10px; font-size: 13.5px; }
+  .palette-list button.on { background: var(--blue-bg); }
+  .palette-list .kind { color: var(--faint); font-size: 12px; margin-left: auto; }
+  .help { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; font-size: 13px; }
+  .selection-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.2); padding: 10px 14px; display: flex; gap: 10px; align-items: center; z-index: 15; font-size: 13px; flex-wrap: wrap; max-width: calc(100vw - 32px); }
+  .selection-bar[hidden] { display: none; }
+  .diff .line { position: relative; }
+  .diff .cm-add { position: absolute; left: 0; top: 0; border: 0; width: 12px; padding: 0; background: var(--blue); color: #fff; font: 700 11px/18px var(--mono); cursor: pointer; opacity: 0; }
+  .diff .line:hover .cm-add { opacity: 1; }
+  .diff .cm-note { margin: 2px 14px 6px 28px; border-left: 3px solid var(--blue); background: var(--blue-bg); padding: 6px 10px; border-radius: 0 6px 6px 0; font: 12.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; white-space: pre-wrap; color: var(--text); display: flex; gap: 8px; align-items: flex-start; }
+  .diff .cm-note button { margin-left: auto; border: 0; background: none; color: var(--muted); cursor: pointer; }
+  .diff .cm-edit { margin: 2px 14px 6px 28px; display: flex; flex-direction: column; gap: 6px; font-family: inherit; }
+  .diff .cm-edit textarea { font: 12.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-height: 60px; border: 1px solid var(--blue); border-radius: 6px; padding: 6px 8px; background: var(--surface); color: var(--text); }
+  .diff .cm-edit .row-btn { display: flex; gap: 6px; }
+  .review-bar { position: sticky; top: 0; z-index: 2; background: var(--blue-bg); color: var(--blue); padding: 8px 14px; display: flex; gap: 10px; align-items: center; font: 600 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .review-bar .btn { margin-left: auto; }
+  .since-box { display: flex; flex-direction: column; gap: 6px; }
+  .since-box select { font-family: inherit; font-size: 12px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; max-width: 100%; }
+  .since-link { align-self: flex-end; border: 0; background: none; color: var(--blue); font-size: 11.5px; cursor: pointer; padding: 0; margin-top: -4px; }
+  .msg .delegate { display: none; border: 0; background: none; color: var(--blue); font-size: 11.5px; cursor: pointer; padding: 0; margin-left: 8px; }
+  .msg.assistant:hover .delegate { display: inline; }
+  .queue-list { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+  .queue-item { display: flex; gap: 8px; align-items: center; background: var(--violet-bg); color: var(--violet); border-radius: 6px; padding: 4px 8px; }
+  .queue-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .queue-item button { border: 0; background: none; color: inherit; cursor: pointer; }
+  .checks { flex: 1; overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .check-row { display: flex; gap: 10px; align-items: center; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .check-row .state { font: 700 11px var(--mono); width: 70px; }
+  .check-row .state.failing { color: var(--red); } .check-row .state.pending { color: var(--amber); } .check-row .state.passing { color: var(--green); }
+  .check-row .grow { flex: 1; min-width: 0; }
+  .ready { border-radius: 10px; padding: 10px 14px; font-weight: 650; background: var(--green-bg); color: var(--green); }
+  .ready.no { background: var(--amber-bg); color: var(--amber); }
+  .rb-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+  @media (max-width: 600px) {
+    header { gap: 8px; }
+    header .updated { display: none; }
+    .counters .counter:nth-child(n+4) { display: none; }
+    .tabs { overflow-x: auto; }
+    .tabs button { white-space: nowrap; }
+    .panel-head { padding: 12px 14px; }
+    .chat { padding: 12px; }
+    .msg { max-width: 94%; }
+    .composer { position: sticky; bottom: 0; background: var(--surface); padding: 10px 12px; }
+    .quick-keys .btn, .card-actions .btn { padding: 7px 12px; font-size: 13px; }
+    .card .pin { font-size: 20px; }
+    dialog.wide { width: 100vw; max-height: 100vh; border-radius: 0; }
+    .selection-bar { width: calc(100vw - 32px); justify-content: center; }
+  }
 
   @media (max-width: 760px) {
     header { padding: 12px 16px; } main { padding: 16px; } .cards { grid-template-columns: 1fr; }
@@ -350,14 +494,30 @@
 </head>
 <body>
 <header>
-  <h1>Worktrees</h1>
+  <h1 id="repo-title">Worktrees</h1>
   <div class="counters" id="counters"></div>
   <div class="actions">
     <div class="filters" id="filters">
       <button class="btn" data-filter="active">Actifs</button>
       <button class="btn" data-filter="all">Tous</button>
     </div>
-    <button class="btn" id="restart-btn" title="Relance start.sh : recharge server.js, index.html et la config">Recharger le cockpit</button>
+    <div class="seg" id="order-seg" title="Ordre des cartes">
+      <button data-order="fixed">Ordre fixe</button>
+      <button data-order="state">Tableau par état</button>
+    </div>
+    <button class="btn bell" id="bell-btn" title="Notifications">🔔<span class="n" id="bell-n" hidden></span></button>
+    <details class="menu" id="tools-menu">
+      <summary class="btn">Outils ▾</summary>
+      <div class="menu-list">
+        <button data-tool="history">Historique des sessions <kbd>H</kbd></button>
+        <button data-tool="cleanup">Nettoyage des worktrees</button>
+        <button data-tool="automations">Automatisations</button>
+        <button data-tool="select">Écrire à plusieurs sessions</button>
+        <button data-tool="palette">Palette de commandes <kbd>Ctrl K</kbd></button>
+        <button data-tool="help">Raccourcis clavier <kbd>?</kbd></button>
+        <button id="restart-btn" title="Relance start.sh : recharge server.js, index.html et la config">Recharger le cockpit</button>
+      </div>
+    </details>
     <button class="btn primary" id="new-btn">Nouvelle session</button>
   </div>
   <span class="updated" id="updated"></span>
@@ -378,6 +538,7 @@
     <div class="chat" id="chat"></div>
     <div class="composer" id="composer">
       <div class="suggest" id="suggest" role="listbox" hidden></div>
+      <div class="queue-list" id="queue-list"></div>
       <div class="composer-row">
         <textarea id="composer-input" placeholder="Écris à Claude… (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"></textarea>
         <button class="btn primary" id="composer-send">Envoyer</button>
@@ -416,6 +577,9 @@
       <span class="hint">Logs du build lancé à la racine du repo (session tmux cw-app).</span>
     </div>
   </div>
+  <div class="view" id="checks-view" hidden>
+    <div class="checks" id="checks"></div>
+  </div>
   <div class="view" id="usage-view" hidden>
     <div class="usage" id="usage"></div>
   </div>
@@ -445,6 +609,11 @@
     <label for="new-prompt">Premier message (optionnel)
       <textarea id="new-prompt" placeholder="Ce que Claude doit faire"></textarea>
     </label>
+    <label for="new-variants" id="new-variants-label">Variantes : N worktrees avec le même prompt, pour comparer les approches
+      <input type="number" id="new-variants" min="1" max="5" value="1">
+    </label>
+    <p class="text" id="new-parent" hidden></p>
+    <label class="check" for="new-notify" id="new-notify-label" hidden><input type="checkbox" id="new-notify" checked> Prévenir la session parente quand celle-ci termine un tour</label>
     <div class="buttons">
       <button type="button" class="btn" data-dismiss>Annuler</button>
       <button type="submit" class="btn primary" id="new-submit">Lancer</button>
@@ -464,6 +633,153 @@
     </div>
   </form>
 </dialog>
+
+<dialog id="inbox-dialog" class="wide">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Notifications</h2>
+      <div class="seg" id="inbox-filter">
+        <button data-f="all" class="on">Toutes</button>
+        <button data-f="unread">Non lues</button>
+        <button data-f="input">Réponses attendues</button>
+        <button data-f="done">Terminés</button>
+        <button data-f="error">Erreurs</button>
+      </div>
+      <span class="grow"></span>
+      <button class="btn" id="inbox-os"></button>
+      <button class="btn" id="inbox-readall">Tout marquer lu</button>
+      <button class="btn" data-dismiss>Fermer</button>
+    </div>
+    <div class="list" id="inbox-list"></div>
+  </div>
+</dialog>
+
+<dialog id="history-dialog" class="wide">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Historique</h2>
+      <input type="search" id="history-q" placeholder="Rechercher dans les conversations et les fichiers touchés…" autocomplete="off">
+      <button class="btn" id="history-back" hidden>← Résultats</button>
+      <button class="btn" data-dismiss>Fermer</button>
+    </div>
+    <div class="list" id="history-list"></div>
+    <div id="history-view" hidden></div>
+  </div>
+</dialog>
+
+<dialog id="cleanup-dialog" class="wide">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Nettoyage des worktrees</h2>
+      <span class="grow"></span>
+      <button class="btn" id="cleanup-archive">Archiver la sélection</button>
+      <button class="btn danger" id="cleanup-close">Fermer la sélection</button>
+      <button class="btn" data-dismiss>Fermer</button>
+    </div>
+    <p class="text">Archiver garde la branche et la session, et permet de restaurer plus tard. Seuls les worktrees sans changement non commité peuvent être archivés ou fermés ici ; fermer est réservé aux branches déjà mergées.</p>
+    <div class="table-scroll" id="cleanup-table"></div>
+  </div>
+</dialog>
+
+<dialog id="auto-dialog" class="wide">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Automatisations</h2>
+      <span class="grow"></span>
+      <button class="btn" data-dismiss>Fermer</button>
+    </div>
+    <div class="list" id="auto-list"></div>
+    <form id="auto-form">
+      <h2 id="auto-form-title">Nouvelle automatisation</h2>
+      <div class="form-grid">
+        <label for="auto-name">Nom<input type="text" id="auto-name" required placeholder="Stand-up quotidien"></label>
+        <label for="auto-worktree">Worktree<input type="text" id="auto-worktree" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,60}" placeholder="auto-standup" list="worktree-names"></label>
+        <label class="check" for="auto-new"><input type="checkbox" id="auto-new"> Nouveau worktree daté à chaque lancement</label>
+      </div>
+      <label for="auto-prompt">Prompt<textarea id="auto-prompt" required placeholder="Ce que Claude doit faire à chaque lancement"></textarea></label>
+      <div class="form-grid">
+        <label for="auto-type">Planification
+          <select id="auto-type"><option value="daily">Chaque jour à une heure</option><option value="interval">Toutes les N minutes</option></select>
+        </label>
+        <label for="auto-time" id="auto-time-label">Heure<input type="time" id="auto-time" value="09:00"></label>
+        <label for="auto-minutes" id="auto-minutes-label" hidden>Minutes (10 minimum)<input type="number" id="auto-minutes" min="10" value="60"></label>
+      </div>
+      <div class="days-pick" id="auto-days">
+        <label><input type="checkbox" value="1" checked>lun</label><label><input type="checkbox" value="2" checked>mar</label><label><input type="checkbox" value="3" checked>mer</label><label><input type="checkbox" value="4" checked>jeu</label><label><input type="checkbox" value="5" checked>ven</label><label><input type="checkbox" value="6">sam</label><label><input type="checkbox" value="0">dim</label>
+      </div>
+      <div class="buttons">
+        <button type="button" class="btn" id="auto-reset">Vider le formulaire</button>
+        <button type="submit" class="btn primary">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog id="pr-dialog" class="wide">
+  <form id="pr-form">
+    <h2 id="pr-title-head">Pousser et ouvrir la PR</h2>
+    <p class="text" id="pr-info"></p>
+    <label for="pr-title">Titre<input type="text" id="pr-title" required></label>
+    <label for="pr-body">Description<textarea id="pr-body" style="min-height: 240px"></textarea></label>
+    <div class="form-grid">
+      <label for="pr-labels">Labels (séparés par des virgules)<input type="text" id="pr-labels"></label>
+      <label for="pr-assignee">Assignee<input type="text" id="pr-assignee"></label>
+      <label class="check" for="pr-draft"><input type="checkbox" id="pr-draft"> PR en draft</label>
+    </div>
+    <div class="buttons">
+      <button type="button" class="btn" data-dismiss>Annuler</button>
+      <button type="submit" class="btn primary" id="pr-submit">Pousser et créer la PR</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="broadcast-dialog">
+  <form id="broadcast-form">
+    <h2>Écrire à plusieurs sessions</h2>
+    <p class="text" id="broadcast-targets"></p>
+    <label for="broadcast-text">Message (les slash-commands marchent)<textarea id="broadcast-text" required></textarea></label>
+    <p class="text">Les sessions occupées reçoivent le message en file : il part à la fin de leur tour.</p>
+    <div class="buttons">
+      <button type="button" class="btn" data-dismiss>Annuler</button>
+      <button type="submit" class="btn primary">Envoyer</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="palette-dialog">
+  <div class="sheet" style="padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+    <input type="search" id="palette-q" placeholder="Aller à un worktree, lancer une action…" autocomplete="off" style="font-family: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text);">
+    <div class="palette-list" id="palette-list"></div>
+  </div>
+</dialog>
+
+<dialog id="help-dialog">
+  <div class="sheet" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+    <h2 style="margin: 0; font-size: 16px;">Raccourcis clavier</h2>
+    <div class="help">
+      <kbd>Ctrl K</kbd><span>Palette de commandes</span>
+      <kbd>j</kbd> <span>Carte suivante</span>
+      <kbd>k</kbd><span>Carte précédente</span>
+      <kbd>Entrée</kbd><span>Ouvrir la carte sélectionnée</span>
+      <kbd>Espace</kbd><span>Déplier le dernier message de la carte</span>
+      <kbd>a</kbd><span>Autoriser la permission en attente (touche 1)</span>
+      <kbd>1-6</kbd><span>Changer d'onglet dans le panneau ouvert</span>
+      <kbd>n</kbd><span>Nouvelle session</span>
+      <kbd>H</kbd><span>Historique</span>
+      <kbd>i</kbd><span>Notifications</span>
+      <kbd>Échap</kbd><span>Fermer le panneau</span>
+      <kbd>?</kbd><span>Cette aide</span>
+    </div>
+    <div class="buttons"><button class="btn" data-dismiss>Fermer</button></div>
+  </div>
+</dialog>
+
+<div class="selection-bar" id="selection-bar" hidden>
+  <span id="selection-count">0 sélectionnée</span>
+  <button class="btn" id="select-idle">Toutes les sessions inactives</button>
+  <button class="btn primary" id="select-write">Écrire à la sélection</button>
+  <button class="btn" id="select-cancel">Annuler</button>
+</div>
 
 <div class="toast" id="toast" hidden></div>
 
@@ -524,7 +840,33 @@
   let pendingOps = [];
   let flushTimer = null;
   let toastTimer = null;
+  let order = localGet('order') || 'fixed';
+  const pins = new Set(parseJson(localGet('pins'), []));
+  let selecting = false;
+  const picked = new Set();
+  let focusIndex = -1;
+  let lastSeenEvent = Number(localGet('lastSeenEvent') || 0);
+  let eventsBootstrapped = false;
+  let inboxFilter = 'all';
+  let inboxEvents = [];
+  let since = null;
+  let sinceFiles = null;
+  const reviewComments = new Map();
+  let lastDiffText = '';
+  let delegateParent = null;
+  let editingAutomation = null;
+  let paletteItems = [];
+  let paletteIndex = 0;
+  let checksLoadedAt = 0;
+  let archivesOpen = false;
+  const openPeeks = new Set();
+  let chatItems = [];
+  let reportBlocks = [];
+  let faviconColor = null;
+  let historyTimer = null;
+  let cleanupRows = [];
 
+  function parseJson(text, fallback) { try { return JSON.parse(text) ?? fallback; } catch { return fallback; } }
   function localGet(key) { try { return localStorage.getItem(key); } catch { return null; } }
   function localSet(key, value) { try { localStorage.setItem(key, value); } catch {} }
   const $ = (id) => document.getElementById(id);
@@ -549,13 +891,97 @@
     }
   }
 
-  function toast(message, kind) {
+  function toast(message, kind, action) {
     const el = $('toast');
     el.textContent = message;
     el.className = `toast ${kind || ''}`;
     el.hidden = false;
+    el.style.cursor = action ? 'pointer' : '';
+    el.onclick = action ? () => { el.hidden = true; action(); } : null;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => (el.hidden = true), kind === 'error' ? 6000 : 3500);
+    toastTimer = setTimeout(() => (el.hidden = true), kind === 'error' || action ? 6000 : 3500);
+  }
+
+  const EVENT_LABEL = { needs_input: 'Attend', permission: 'Permission', question: 'Question', done: 'Terminé', ci_failed: 'CI en échec', app_ko: 'App KO', merged: 'Mergée', automation: 'Automatisation', automation_failed: 'Automatisation KO' };
+  const EVENT_GROUPS = { input: ['needs_input', 'permission', 'question'], done: ['done', 'automation', 'merged'], error: ['ci_failed', 'app_ko', 'automation_failed'] };
+
+  function updateTitle() {
+    const needs = state.worktrees.filter((w) => sessionStatus(w) === 'needs_input').length;
+    const working = state.worktrees.filter((w) => sessionStatus(w) === 'working').length;
+    document.title = `${needs ? `(${needs}) ` : ''}Worktrees`;
+    $('bell-n').hidden = !state.unread;
+    $('bell-n').textContent = state.unread > 99 ? '99+' : String(state.unread || '');
+    const color = needs ? '#e0a020' : working ? '#2f6fec' : '#8b929c';
+    if (color === faviconColor) return;
+    faviconColor = color;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 32;
+    const g = canvas.getContext('2d');
+    g.fillStyle = color;
+    g.beginPath();
+    g.arc(16, 16, 13, 0, Math.PI * 2);
+    g.fill();
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+    link.href = canvas.toDataURL();
+  }
+
+  async function loadEvents() {
+    const res = await api('/api/events').catch(() => null);
+    if (!res?.ok) return null;
+    const data = await res.json();
+    inboxEvents = data.events;
+    return data;
+  }
+
+  function openEvent(e) {
+    post('/api/events/read', { ids: [e.id] });
+    const wt = state.worktrees.find((w) => w.path === e.path || w.name === e.worktree);
+    if ($('inbox-dialog').open) $('inbox-dialog').close();
+    if (wt) select(wt.path);
+  }
+
+  async function checkEvents() {
+    if (!eventsBootstrapped) {
+      eventsBootstrapped = true;
+      if (!lastSeenEvent || lastSeenEvent > state.lastEventId) { lastSeenEvent = state.lastEventId; localSet('lastSeenEvent', String(lastSeenEvent)); return; }
+    }
+    if (state.lastEventId <= lastSeenEvent) return;
+    const data = await loadEvents();
+    if (!data) return;
+    const fresh = data.events.filter((e) => e.id > lastSeenEvent).reverse();
+    lastSeenEvent = data.seq;
+    localSet('lastSeenEvent', String(lastSeenEvent));
+    for (const e of fresh.slice(-3)) {
+      const open = () => openEvent(e);
+      toast(`${e.worktree ? `${e.worktree} · ` : ''}${EVENT_LABEL[e.type] || e.type} : ${e.message || ''}`, EVENT_GROUPS.error.includes(e.type) ? 'error' : '', open);
+      if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+        const n = new Notification(`Cockpit · ${e.worktree || ''}`, { body: e.message || EVENT_LABEL[e.type], tag: `cw-${e.id}` });
+        n.onclick = () => { window.focus(); open(); };
+      }
+    }
+    if ($('inbox-dialog').open) renderInbox();
+  }
+
+  function renderInbox() {
+    const list = inboxEvents.filter((e) => inboxFilter === 'all' || (inboxFilter === 'unread' ? !e.read : EVENT_GROUPS[inboxFilter].includes(e.type)));
+    $('inbox-list').innerHTML = list.length
+      ? list.map((e) => `<div class="row clickable ${e.read ? '' : 'unread'}" data-event="${e.id}">
+          <div class="top-line"><span class="ev-type ${esc(e.type)}">${esc(EVENT_LABEL[e.type] || e.type)}</span><span class="grow">${esc(e.worktree || '')}</span><span class="meta-line">il y a ${ago(e.at)}</span></div>
+          <div class="meta-line">${esc(e.message || '')}</div>
+        </div>`).join('')
+      : '<div class="placeholder">Aucune notification.</div>';
+    document.querySelectorAll('#inbox-filter button').forEach((b) => b.classList.toggle('on', b.dataset.f === inboxFilter));
+    const os = $('inbox-os');
+    if (!('Notification' in window) || !window.isSecureContext) { os.textContent = 'Notifs système : HTTPS requis'; os.disabled = true; os.title = 'Le navigateur n’autorise les notifications système qu’en HTTPS ou sur localhost.'; }
+    else if (Notification.permission === 'granted') { os.textContent = 'Notifs système actives'; os.disabled = true; }
+    else { os.textContent = 'Activer les notifs système'; os.disabled = false; }
+  }
+
+  async function openInbox() {
+    await loadEvents();
+    renderInbox();
+    if (!$('inbox-dialog').open) $('inbox-dialog').showModal();
   }
 
   function ago(ts) {
@@ -587,7 +1013,7 @@
       let bg = st.bg;
       if (st.inverse) [fg, bg] = [bg || 'var(--term-bg)', fg || 'var(--term-fg)'];
       const css = [fg && `color:${fg}`, bg && `background:${bg}`, st.bold && 'font-weight:700', st.dim && 'opacity:.6', st.italic && 'font-style:italic', st.underline && 'text-decoration:underline'].filter(Boolean).join(';');
-      out += css ? `<span style="${css}">${esc(chunk)}</span>` : esc(chunk);
+      out += css ? `<span style="${css}">${escLink(chunk)}</span>` : escLink(chunk);
     };
     while ((m = re.exec(clean))) {
       flush(clean.slice(last, m.index));
@@ -622,10 +1048,20 @@
     return out;
   }
 
+  function linkify(html) {
+    return html.replace(/https?:\/\/[^\s<>"'`*]+/g, (raw) => {
+      const cut = raw.search(/&(quot|#39|lt|gt);/);
+      const url = (cut >= 0 ? raw.slice(0, cut) : raw).replace(/[.,;:!?)\]]+$/, '');
+      return `<a href="${url}" target="_blank" rel="noopener">${url}</a>${raw.slice(url.length)}`;
+    });
+  }
+
+  const escLink = (s) => linkify(esc(s));
+
   function md(text) {
-    const inline = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    const inline = (s) => escLink(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
     return text.split(/```[^\n]*\n?/).map((part, i) => {
-      if (i % 2) return `<pre><code>${esc(part.replace(/\n$/, ''))}</code></pre>`;
+      if (i % 2) return `<pre><code>${escLink(part.replace(/\n$/, ''))}</code></pre>`;
       return part.split(/\n{2,}/).map((block) => {
         const lines = block.split('\n').filter((l) => l.trim());
         if (!lines.length) return '';
@@ -711,13 +1147,22 @@
       ['up', 'degraded', 'starting'].includes(app.state) ? `<a href="${esc(app.link)}" target="_blank" rel="noopener">Ouvrir l'app ↗</a>` : '',
     ].join('');
     return `<div class="app-info">
-        <div class="branch">App lancée depuis ${esc(state.repo)} · branche ${esc(main ? branchLabel(main) : '?')}</div>
-        ${currentWt() && currentWt().name !== 'main' && main && branchLabel(currentWt()) !== branchLabel(main) ? `<div class="reason warn">Ce worktree est sur ⎇ ${esc(branchLabel(currentWt()))} : l'app sert ⎇ ${esc(branchLabel(main))}, pas ce worktree.</div>` : ''}
+        ${app.serving
+          ? `<div class="branch">App servie depuis le worktree <b>${esc(app.serving.name)}</b> · ⎇ ${esc(app.serving.branch || '?')} @ ${esc(String(app.serving.sha).slice(0, 7))} (commit, sans les changements non commités) <button class="btn" data-app="unserve">Revenir au checkout principal</button></div>`
+          : `<div class="branch">App lancée depuis ${esc(state.repo)} · branche ${esc(main ? branchLabel(main) : '?')}</div>`}
+        ${!app.serving && currentWt() && currentWt().name !== 'main' && main && branchLabel(currentWt()) !== branchLabel(main) ? `<div class="reason warn">Ce worktree est sur ⎇ ${esc(branchLabel(currentWt()))} : l'app sert ⎇ ${esc(branchLabel(main))}, pas ce worktree. <button class="btn" data-serve="${esc(currentWt().path)}">Servir ce worktree</button></div>` : ''}
         ${lines.join('')}<div class="app-actions">${actions}</div>
       </div>`;
   }
 
   async function appAction(action) {
+    if (action === 'unserve') {
+      if (!confirm("Remettre le checkout principal sur sa branche d'origine et relancer l'app ?")) return;
+      const result = await post('/api/app/unserve', {});
+      toast(result.ok ? "Checkout principal restauré, l'app redémarre." : result.data.error || 'Action impossible.', result.ok ? '' : 'error');
+      setTimeout(refresh, 800);
+      return;
+    }
     if (action === 'stop' && !confirm(`Arrêter l'app${state.app?.usesPm2 ? ' (pm2 delete all)' : ''} ?`)) return;
     const result = await post(action === 'stop' ? '/api/app/stop' : '/api/app/start', { restart: action === 'restart' });
     if (!result.ok) { toast(result.data.error || 'Action impossible.', 'error'); return; }
@@ -726,6 +1171,7 @@
   }
 
   function renderCounters() {
+    $('repo-title').innerHTML = `Worktrees<span class="repo" title="${esc(state.repo)}">${esc(state.repoName)}</span>`;
     const count = (st) => state.worktrees.filter((w) => sessionStatus(w) === st).length;
     const dirty = state.worktrees.filter((w) => w.files.length).length;
     $('counters').innerHTML = [
@@ -910,13 +1356,74 @@
     return [...chips, ...kindCounts(r.report).map(([k, n]) => `<span class="chip k-${k}">${n} ${KINDS[k].short}${n > 1 && !['à corriger', 'bien vu'].includes(KINDS[k].short) ? 's' : ''}</span>`)];
   }
 
+  const lastActivity = (wt) => Math.max(wt.sessions[0]?.updatedAt || 0, wt.lastCommit?.at || 0);
+  const liveSession = (wt) => wt.sessions.find((s) => s.live) || null;
+  const isBase = (wt) => wt.name === 'main' || !wt.branch || wt.branch === state.baseBranch;
+
+  function prChip(pr) {
+    if (!pr) return '';
+    let cls = 'pr-open';
+    let label = `#${pr.number}`;
+    if (pr.state === 'MERGED') { cls = 'pr-merged'; label += ' mergée'; }
+    else if (pr.state === 'CLOSED') { cls = 'pr-closed'; label += ' fermée'; }
+    else if (pr.draft) { cls = 'pr-draft'; label += ' draft'; }
+    else if (pr.failing) { cls = 'pr-failing'; label += ` · CI ✕ ${pr.failing}`; }
+    else if (pr.review === 'CHANGES_REQUESTED') { cls = 'pr-changes'; label += ' · changements demandés'; }
+    else if (pr.pending) { cls = 'pr-pending'; label += ' · CI en cours'; }
+    else if (pr.review === 'APPROVED') { cls = 'pr-ready'; label += ' · prête'; }
+    else label += ' · review attendue';
+    const title = `${pr.title || ''}\nChecks : ${pr.passing} ok · ${pr.pending} en cours · ${pr.failing} en échec`;
+    return `<a class="chip pr ${cls}" href="${esc(pr.url)}" target="_blank" rel="noopener" title="${esc(title)}">${esc(label)}</a>`;
+  }
+
+  function extChips(wt) {
+    const repos = new Map();
+    for (const s of wt.sessions.slice(0, 3)) for (const r of s.externalRepos || []) repos.set(r.path, r);
+    return [...repos.values()].map((r) => `<span class="ext-chip" title="La session modifie aussi des fichiers de ${esc(r.path)}">aussi : ${esc(r.name)}${r.branch ? ` ⎇ ${esc(r.branch)}` : ''}</span>`).join('');
+  }
+
+  function quickBlock(wt, s, st) {
+    if (!s) return '';
+    const parts = [];
+    const keyBtn = (key, label, cls = '') => `<button class="btn ${cls}" data-quick-key="${key}" data-session="${esc(s.sessionId)}">${esc(label)}</button>`;
+    if (st === 'needs_input' && s.live) {
+      if (s.question?.options?.length) parts.push(`<div class="quick-keys">${s.question.options.map((o, i) => keyBtn(i + 1, `${i + 1}. ${o}`)).join('')}</div>`);
+      else if (s.permission) parts.push(`<div class="quick-keys">${keyBtn(1, 'Autoriser', 'allow')}${keyBtn(2, 'Toujours autoriser')}${keyBtn(3, 'Refuser', 'deny')}</div>`);
+    }
+    if (s.lastAssistant && ['done', 'idle'].includes(st)) {
+      parts.push(`<div class="peek ${openPeeks.has(wt.path) ? 'open' : ''}" data-peek="${esc(wt.path)}" title="Clique pour déplier"><b>Claude :</b> ${esc(s.lastAssistant)}</div>`);
+    }
+    if (s.live && st !== 'working') parts.push(`<form class="quick" data-quick="${esc(s.sessionId)}"><input name="q" placeholder="${st === 'needs_input' ? 'Répondre à Claude…' : 'Message rapide à Claude…'}" autocomplete="off" aria-label="Message rapide à Claude"></form>`);
+    return parts.join('');
+  }
+
+  function cardActions(wt) {
+    const actions = [];
+    const serving = state.app?.serving;
+    if (!isBase(wt) && state.pr?.enabled) {
+      if (wt.pr?.state === 'OPEN' && wt.ahead) actions.push(`<button class="btn" data-push="${esc(wt.path)}">Pousser ${wt.ahead} commit${wt.ahead > 1 ? 's' : ''}</button>`);
+      else if (wt.pr?.state !== 'OPEN' && wt.pr?.state !== 'MERGED' && (wt.ahead || !wt.upstream) && wt.lastCommit) actions.push(`<button class="btn" data-pr="${esc(wt.path)}">Pousser et ouvrir la PR</button>`);
+    }
+    if (state.app && wt.name !== 'main' && wt.headSha && serving?.name !== wt.name) actions.push(`<button class="btn" data-serve="${esc(wt.path)}" title="Relance l'app sur le dernier commit de ce worktree">Servir l'app</button>`);
+    if (wt.name !== 'main' && !wt.locked) {
+      actions.push(`<button class="btn ${wt.pr?.state === 'MERGED' ? 'primary' : ''}" data-archive="${esc(wt.path)}" title="Retire le worktree en gardant la branche et la session">Archiver</button>`);
+      actions.push(`<button class="card-close" data-close="${esc(wt.path)}" title="Fermer ce worktree">Fermer</button>`);
+    }
+    return actions.length ? `<div class="card-actions">${actions.join('')}</div>` : '';
+  }
+
   function card(wt) {
     const st = sessionStatus(wt);
     const s = wt.sessions[0];
     const last = s?.actions?.[0];
     const meta = reviewChips(wt);
     const ctx = s?.usage?.context?.usedPercentage;
-    if (ctx != null && level(ctx)) meta.push(`<span class="chip ctx-${level(ctx)}" title="Fenêtre de contexte de la session">Contexte : ${Math.max(0, 100 - Math.round(ctx))} % restants</span>`);
+    if (state.app?.serving?.name === wt.name) meta.push('<span class="chip served" title="L\'app tourne sur le dernier commit de ce worktree">▶ app servie</span>');
+    const queued = wt.sessions.reduce((n, x) => n + (x.queue?.length || 0), 0);
+    if (queued) meta.push(`<span class="chip queued">⏳ ${queued} en file</span>`);
+    if (wt.parent) meta.push(`<span class="chip link" title="Session déléguée depuis ${esc(wt.parent.parentWorktree)}">← ${esc(wt.parent.parentWorktree)}</span>`);
+    if (wt.children?.length) meta.push(`<span class="chip link" title="${esc(wt.children.map((c) => `${c.name} : ${STATUS[c.status]?.label || c.status}`).join('\n'))}">→ ${wt.children.length} déléguée${wt.children.length > 1 ? 's' : ''}</span>`);
+    if (ctx != null && level(ctx)) meta.push(`<span class="chip ctx-${level(ctx)}" title="Fenêtre de contexte de la session${level(ctx) === 'crit' ? ' : pense à /compact' : ''}">Contexte : ${Math.max(0, 100 - Math.round(ctx))} % restants</span>`);
     if (wt.sessions.some((x) => x.live)) meta.push('<span class="chip live">⌨ pilotable</span>');
     if (wt.files.length) meta.push(`<span class="chip">✎ ${wt.files.length} fichier${wt.files.length > 1 ? 's' : ''}</span>`);
     if (wt.added || wt.deleted) meta.push(`<span class="chip"><span class="plus">+${wt.added}</span> <span class="minus">−${wt.deleted}</span></span>`);
@@ -925,36 +1432,86 @@
     if (wt.staged) meta.push(`<span class="chip" title="Changements indexés, masqués dans Changements">● ${wt.staged} indexé${wt.staged > 1 ? 's' : ''}</span>`);
     if (!wt.files.length && !wt.staged && !wt.ahead) meta.push('<span class="chip">✓ propre</span>');
     if (wt.locked) meta.push('<span class="chip">🔒 verrouillé</span>');
-    if (wt.name !== 'main' && !wt.locked) meta.push(`<button class="card-close" data-close="${esc(wt.path)}" title="Fermer ce worktree">Fermer</button>`);
+    const pinned = pins.has(wt.path);
     return `<div class="card ${st} ${selected === wt.path ? 'selected' : ''}" data-path="${esc(wt.path)}">
       <div class="top">
-        <div><div class="name">${esc(wt.name)}</div><div class="branch-row">${branchChip(wt)}</div></div>
+        ${selecting ? `<input type="checkbox" class="pick" data-pick="${esc(wt.path)}" ${picked.has(wt.path) ? 'checked' : ''} aria-label="Sélectionner ${esc(wt.name)}">` : ''}
+        <div><div class="name">${esc(wt.name)}</div><div class="branch-row">${branchChip(wt)}${prChip(wt.pr)}${extChips(wt)}</div></div>
         <span class="badge ${st}"><span class="dot"></span>${STATUS[st].label}${s ? ` · ${ago(s.updatedAt)}` : ''}</span>
+        <button class="pin ${pinned ? 'on' : ''}" data-pin="${esc(wt.path)}" title="${pinned ? 'Désépingler' : 'Épingler'}">${pinned ? '★' : '☆'}</button>
       </div>
       ${s?.task ? `<div class="task">${esc(s.task)}</div>` : ''}
-      ${st === 'needs_input' && s.message ? `<div class="message">${esc(s.message)}</div>` : ''}
+      ${st === 'needs_input' && s.message ? `<div class="message">${esc(s.message)}${s.updatedAt ? ` · depuis ${ago(s.updatedAt)}` : ''}</div>` : ''}
       ${st === 'working' && last ? `<div class="action"><span class="tool">${esc(last.tool)}</span><span class="detail">${esc(last.detail)}</span></div>` : ''}
+      ${quickBlock(wt, s, st)}
       <div class="meta">${meta.join('')}</div>
+      ${cardActions(wt)}
       ${wt.lastCommit ? `<div class="commit">${esc(wt.lastCommit.subject)} · ${ago(wt.lastCommit.at)}</div>` : ''}
     </div>`;
+  }
+
+  function archivesSection() {
+    const rows = state.archives.map((a) => `<div class="archive-row">
+        <div class="grow"><b>${esc(a.name)}</b> · ⎇ ${esc(a.branch || a.head?.slice(0, 7) || '?')} · archivé il y a ${ago(a.archivedAt)}${a.sessions?.[0]?.task ? `<div class="hint">${esc(a.sessions[0].task)}</div>` : ''}</div>
+        ${a.pr ? `<a class="chip pr ${a.pr.state === 'MERGED' ? 'pr-merged' : 'pr-open'}" href="${esc(a.pr.url)}" target="_blank" rel="noopener">#${a.pr.number}</a>` : ''}
+        <button class="btn" data-unarchive="${esc(a.name)}">Restaurer</button>
+        ${a.sessions?.length ? `<button class="btn primary" data-unarchive="${esc(a.name)}" data-resume="1">Restaurer et reprendre</button>` : ''}
+      </div>`).join('');
+    return `<section class="grid-section"><details class="archives" ${archivesOpen ? 'open' : ''}><summary>Archivées <span class="count">${state.archives.length}</span></summary><div class="archive-list">${rows}</div></details></section>`;
   }
 
   function renderGrid() {
     const list = sorted(filter === 'active' ? state.worktrees.filter(isActive) : state.worktrees);
     const standard = list.filter((w) => !w.review);
     const reviews = list.filter((w) => w.review);
+    const empty = '<div class="empty">Aucun worktree actif</div>';
     const section = (title, count, body) => `<section class="grid-section"><h2>${title}${count === null ? '' : `<span class="count">${count}</span>`}</h2><div class="cards">${body}</div></section>`;
-    $('grid').innerHTML = [
-      section('Outils', null, shellCard() + usageCard()),
-      section('Worktrees', standard.length, standard.length ? standard.map(card).join('') : '<div class="empty">Aucun worktree actif</div>'),
-      reviews.length ? section('Reviews', reviews.length, reviews.map(card).join('')) : '',
-    ].join('');
+    const parts = [section('Outils', null, shellCard() + usageCard())];
+    if (order === 'state') {
+      const byPinThenActivity = (a, b) => pins.has(b.path) - pins.has(a.path) || lastActivity(b) - lastActivity(a);
+      const columns = [
+        ['needs', 'À toi de jouer', 'Claude attend une réponse ou une permission.', (w) => sessionStatus(w) === 'needs_input'],
+        ['working', 'En cours', 'Claude travaille.', (w) => sessionStatus(w) === 'working'],
+        ['review', 'À relire', 'Tour terminé avec des changements, des commits ou une PR ouverte.', (w) => sessionStatus(w) === 'done' && (w.files.length || w.ahead || w.pr?.state === 'OPEN')],
+        ['rest', 'Au repos', 'Rien en attente.', () => true],
+      ];
+      const left = [...standard];
+      const html = columns.map(([cls, title, hint, test]) => {
+        const items = left.filter(test).sort(byPinThenActivity);
+        items.forEach((w) => left.splice(left.indexOf(w), 1));
+        return `<div class="column ${cls}"><h2>${title}<span class="count">${items.length}</span></h2><p>${hint}</p>${items.length ? items.map(card).join('') : '<div class="empty-col">Rien ici</div>'}</div>`;
+      }).join('');
+      parts.push(`<section class="grid-section"><h2>Worktrees<span class="count">${standard.length}</span></h2><div class="kanban">${html}</div></section>`);
+    } else {
+      const ordered = [...standard.filter((w) => pins.has(w.path)), ...standard.filter((w) => !pins.has(w.path))];
+      parts.push(section('Worktrees', standard.length, ordered.length ? ordered.map(card).join('') : empty));
+    }
+    if (reviews.length) parts.push(section('Reviews', reviews.length, reviews.map(card).join('')));
+    if (state.archives?.length) parts.push(archivesSection());
+
+    const drafts = {};
+    document.querySelectorAll('#grid form.quick input').forEach((i) => { if (i.value) drafts[i.closest('form').dataset.quick] = i.value; });
+    const active = document.activeElement?.closest?.('#grid form.quick') ? { id: document.activeElement.closest('form').dataset.quick, start: document.activeElement.selectionStart } : null;
+    $('grid').innerHTML = parts.join('');
+    for (const [id, value] of Object.entries(drafts)) {
+      const input = document.querySelector(`#grid form.quick[data-quick="${CSS.escape(id)}"] input`);
+      if (input) input.value = value;
+    }
+    if (active) {
+      const input = document.querySelector(`#grid form.quick[data-quick="${CSS.escape(active.id)}"] input`);
+      if (input) { input.focus(); input.setSelectionRange(active.start, active.start); }
+    }
+    if (focusIndex >= 0) document.querySelectorAll('#grid .card')[focusIndex]?.classList.add('focused');
     document.querySelectorAll('#filters button').forEach((b) => b.classList.toggle('on', b.dataset.filter === filter));
+    document.querySelectorAll('#order-seg button').forEach((b) => b.classList.toggle('on', b.dataset.order === order));
+    $('selection-bar').hidden = !selecting;
+    $('selection-count').textContent = `${picked.size} sélectionnée${picked.size > 1 ? 's' : ''}`;
   }
 
   function renderTabs() {
     const tabs = selected === SHELL ? [['term', 'Terminal']] : selected === USAGE ? [['usage', 'Tokens']] : [['chat', 'Conversation'], ['term', 'Terminal'], ['changes', 'Changements']];
     if (currentWt()?.review) tabs.unshift(['report', 'Rapport']);
+    if (currentWt() && !isBase(currentWt()) && state.pr?.enabled) tabs.push(['checks', currentWt().pr ? `PR #${currentWt().pr.number}` : 'PR']);
     if (state.app) tabs.push(['app', `App<span class="tab-dot ${esc(state.app.state)}"></span>`]);
     if (!tabs.some(([id]) => id === tab)) tab = tabs[0][0];
     $('tabs').innerHTML = tabs.map(([id, label]) => `<button data-tab="${id}" class="${id === tab ? 'on' : ''}">${label}</button>`).join('');
@@ -964,6 +1521,7 @@
     $('changes-view').hidden = tab !== 'changes';
     $('usage-view').hidden = tab !== 'usage';
     $('app-view').hidden = tab !== 'app';
+    $('checks-view').hidden = tab !== 'checks';
   }
 
   function renderPanel() {
@@ -987,20 +1545,40 @@
     const st = sessionStatus(wt);
     const s = currentSession();
     $('panel-head').innerHTML = `
-      <div><div class="name">${esc(wt.name)}</div><div class="branch-row">${branchChip(wt)}<span class="branch">${esc(wt.path)}</span></div></div>
+      <div><div class="name">${esc(wt.name)}</div><div class="branch-row"><span class="repo-chip" title="Repo">${esc(state.repoName)}</span>${branchChip(wt)}${prChip(wt.pr)}<span class="branch">${esc(wt.path)}</span></div>${extChips(wt) ? `<div class="branch-row">${extChips(wt)}</div>` : ''}</div>
       ${headEnd(`<span class="badge ${st}"><span class="dot"></span>${STATUS[st].label}</span>`)}`;
     renderReport(wt);
     renderChatBar(wt);
     renderComposer(s);
     updateMode();
-    const files = wt.files.map((f) => {
-      const code = f.code === '??' ? 'U' : f.code.charAt(1);
+    const shown = since ? sinceFiles || [] : wt.files;
+    const files = shown.map((f) => {
+      const code = f.code === '??' ? 'U' : f.code.length > 1 ? f.code.charAt(1) : f.code;
       const stat = f.added || f.deleted ? `<span class="fstat"><span class="plus">+${f.added || 0}</span> <span class="minus">−${f.deleted || 0}</span></span>` : '';
       return `<div class="file ${selectedFile === f.path ? 'active' : ''}" data-file="${esc(f.path)}"><span class="code ${code}">${code}</span><span class="fpath">&lrm;${esc(f.path)}</span>${stat}</div>`;
-    }).join('') || '<div class="tl"><span></span><span class="what">Aucun changement</span></div>';
+    }).join('') || `<div class="tl"><span></span><span class="what">${since && !sinceFiles ? 'Chargement…' : 'Aucun changement'}</span></div>`;
+    const checkpoints = [...(s?.checkpoints || [])].reverse();
+    const sinceBox = checkpoints.length ? `<div class="since-box"><h3>Comparer à</h3>
+        <select id="since-select" aria-label="Point de comparaison">
+          <option value="">Dernier commit (HEAD)</option>
+          ${checkpoints.map((c, i) => `<option value="${esc(c.sha)}" ${since === c.sha ? 'selected' : ''}>Avant le tour ${checkpoints.length - i} · ${new Date(c.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${esc(String(c.prompt || '').slice(0, 50))}</option>`).join('')}
+        </select>
+        ${since ? '<button class="btn danger" id="restore-btn" title="Remet les fichiers suivis dans leur état d\'avant ce tour">Restaurer ce point</button>' : ''}
+      </div>` : '';
     $('side').innerHTML = `
       ${s?.task ? `<div><h3>Tâche</h3><div class="task" style="-webkit-line-clamp: 8">${esc(s.task)}</div></div>` : ''}
-      <div><h3>Fichiers modifiés</h3>${files}</div>`;
+      ${sinceBox}
+      <div><h3>${since ? 'Modifiés depuis ce point' : 'Fichiers modifiés'}</h3>${files}</div>`;
+  }
+
+  async function loadSince() {
+    sinceFiles = null;
+    renderPanel();
+    if (!since) { loadDiff(); return; }
+    const res = await api(`/api/changes?wt=${encodeURIComponent(selected)}&since=${since}`).catch(() => null);
+    sinceFiles = res?.ok ? await res.json() : [];
+    renderPanel();
+    loadDiff();
   }
 
   let reportSignature = null;
@@ -1049,9 +1627,13 @@
     const sec = (title, text) => (text ? `<div class="rb-sec"><h5>${title}</h5>${md(String(text))}</div>` : '');
     const loc = b.file ? `<div class="rb-loc">${esc(b.file)}${b.line ? `:${esc(b.line)}` : ''}</div>` : '';
     const draft = b.comment ? `<div class="rb-draft"><div class="row"><h5>Brouillon de commentaire</h5><button class="btn" data-draft="${drafts.push(String(b.comment)) - 1}">Copier</button></div>${md(String(b.comment))}</div>` : '';
+    const index = reportBlocks.push(b) - 1;
+    const actions = ['blocking', 'fix', 'suggestion'].includes(k) || b.file
+      ? `<div class="rb-actions">${['blocking', 'fix', 'suggestion'].includes(k) ? `<button class="btn" data-fixblock="${index}">Faire corriger par Claude</button>` : ''}${b.file ? `<button class="btn" data-showdiff="${index}">Voir dans le diff</button>` : ''}</div>`
+      : '';
     return `<article class="rb ${k}" id="r-b-${i}">
       <div class="rb-head"><span class="rb-tag">${KINDS[k].label}</span><span class="rb-title">${esc(b.title)}</span>${loc}</div>
-      <div class="rb-body">${sec('Constat', b.finding)}${sec('Impact', b.impact)}${sec('Correctif proposé', b.fix)}${draft}</div>
+      <div class="rb-body">${sec('Constat', b.finding)}${sec('Impact', b.impact)}${sec('Correctif proposé', b.fix)}${draft}${actions}</div>
     </article>`;
   }
 
@@ -1061,6 +1643,7 @@
     if (signature === reportSignature) return;
     reportSignature = signature;
     drafts.length = 0;
+    reportBlocks = [];
     const box = $('report');
     $('report-grid').classList.toggle('no-map', !r?.report);
     if (!r?.report) $('minimap').innerHTML = '';
@@ -1117,10 +1700,10 @@
 
   function renderChatBar(wt) {
     const chip = branchChip(wt);
-    const signature = `${wt.path}|${wt.sessions.map((s) => `${s.sessionId}:${s.live}`).join(',')}|${chatSession}|${chip}`;
+    const signature = `${wt.path}|${wt.sessions.map((s) => `${s.sessionId}:${s.live}`).join(',')}|${chatSession}|${chip}|${prChip(wt.pr)}|${extChips(wt)}`;
     if (signature === chatBarSignature) return;
     chatBarSignature = signature;
-    const onBranch = `<span class="on-branch">Sur ${chip}</span>`;
+    const onBranch = `<span class="on-branch">Sur <span class="repo-chip">${esc(state.repoName)}</span>${chip}${prChip(wt.pr)}${extChips(wt)}</span>`;
     if (!wt.sessions.length) { $('chat-bar').innerHTML = `${onBranch} · Aucune session suivie pour ce worktree.`; return; }
     const options = wt.sessions.map((s) => `<option value="${esc(s.sessionId)}" ${s.sessionId === chatSession ? 'selected' : ''}>${s.live ? '⌨ ' : ''}${esc((s.task || 'Session sans prompt').slice(0, 70))} · ${ago(s.updatedAt)}</option>`).join('');
     $('chat-bar').innerHTML = `${onBranch}<label for="session-select">Session</label><select id="session-select">${options}</select>`;
@@ -1130,6 +1713,8 @@
     const live = !!s?.live;
     $('composer-input').disabled = !live;
     $('composer-send').disabled = !live;
+    $('composer-send').textContent = s?.status === 'working' ? 'Mettre en file' : 'Envoyer';
+    $('queue-list').innerHTML = (s?.queue || []).map((q) => `<div class="queue-item"><span title="${esc(q.text)}">⏳ En file : ${esc(q.text)}</span><button data-dequeue="${esc(q.id)}" title="Retirer de la file">✕</button></div>`).join('');
     if (live) $('composer-note').innerHTML = 'Le message est tapé dans la session tmux, comme si tu étais dans le terminal.';
     else if (s) $('composer-note').innerHTML = `Cette session ne tourne pas dans tmux : lecture seule. <button class="btn" id="resume-btn">Reprendre dans le cockpit</button>`;
     else $('composer-note').innerHTML = 'Lance une session avec « Nouvelle session » pour écrire à Claude depuis ici.';
@@ -1189,18 +1774,24 @@
     const last = chat.items[chat.items.length - 1];
     const session = currentSession();
     const awaiting = session?.status === 'needs_input' ? session.message || 'Claude attend ta réponse' : null;
-    const signature = `${chat.sessionId}|${chat.total}|${last ? (last.result || last.text || '').length : 0}|${awaiting}`;
+    const signature = `${chat.sessionId}|${chat.total}|${last ? (last.result || last.text || '').length : 0}|${awaiting}|${session?.checkpoints?.length || 0}`;
     if (!force && signature === chatSignature) return;
     chatSignature = signature;
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
     const opened = new Set([...box.querySelectorAll('details.tool[open]')].map((d) => d.dataset.index));
     const time = (at) => (at ? new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
     const lastIndex = chat.items.length - 1;
+    chatItems = chat.items;
+    const checkpoints = session?.checkpoints || [];
+    const checkpointAt = (at) => checkpoints.find((c) => at && Math.abs(c.at - at) < 15000);
     box.innerHTML = (chat.total > chat.items.length ? `<div class="placeholder">${chat.total - chat.items.length} éléments plus anciens masqués</div>` : '') + chat.items.map((item, i) => {
       const mark = awaiting && i === lastIndex ? 'awaiting' : '';
-      if (item.kind === 'user') return `<div class="msg user ${mark}">${esc(item.text)}<span class="when">${time(item.at)}</span></div>`;
-      if (item.kind === 'assistant') return `<div class="msg assistant ${mark}">${md(item.text)}<span class="when">${time(item.at)}</span></div>`;
-      return `<details class="tool ${item.error ? 'error' : ''} ${mark}" data-index="${i}" ${opened.has(String(i)) ? 'open' : ''}><summary><b>${esc(item.tool)}</b><span>${esc(item.detail)}</span></summary>${item.result ? `<pre>${esc(item.result)}</pre>` : ''}</details>`;
+      if (item.kind === 'user') {
+        const cp = checkpointAt(item.at);
+        return `<div class="msg user ${mark}">${escLink(item.text)}<span class="when">${time(item.at)}</span></div>${cp ? `<button class="since-link" data-since="${esc(cp.sha)}">Changements depuis ce message</button>` : ''}`;
+      }
+      if (item.kind === 'assistant') return `<div class="msg assistant ${mark}">${md(item.text)}<span class="when">${time(item.at)}<button class="delegate" data-delegate="${i}" title="Lancer une session liée pour cette sous-tâche">Déléguer</button></span></div>`;
+      return `<details class="tool ${item.error ? 'error' : ''} ${mark}" data-index="${i}" ${opened.has(String(i)) ? 'open' : ''}><summary><b>${esc(item.tool)}</b><span>${escLink(item.detail)}</span></summary>${item.result ? `<pre>${escLink(item.result)}</pre>` : ''}</details>`;
     }).join('') + (awaiting ? `<div class="awaiting-note">${esc(awaiting)}${session.live ? ' · <button data-goto="term">Répondre dans le terminal</button>' : ''}</div>` : '');
     if (nearBottom || force) box.scrollTop = box.scrollHeight;
   }
@@ -1220,12 +1811,62 @@
   async function loadDiff() {
     const box = $('diff');
     if (!selectedFile) { box.innerHTML = '<div class="placeholder">Choisis un fichier pour voir son diff</div>'; return; }
-    const res = await api(`/api/diff?wt=${encodeURIComponent(selected)}&file=${encodeURIComponent(selectedFile)}`);
-    const text = await res.text();
-    box.innerHTML = text.split('\n').map((l) => {
-      const cls = l.startsWith('@@') ? 'hunk' : /^(diff |index |--- |\+\+\+ |new file|deleted file)/.test(l) ? 'meta-line' : l.startsWith('+') ? 'add' : l.startsWith('-') ? 'del' : '';
-      return `<div class="line ${cls}">${esc(l) || ' '}</div>`;
-    }).join('') || '<div class="placeholder">Pas de diff</div>';
+    const res = await api(`/api/diff?wt=${encodeURIComponent(selected)}&file=${encodeURIComponent(selectedFile)}${since ? `&since=${since}` : ''}`);
+    lastDiffText = await res.text();
+    renderDiff();
+  }
+
+  const commentsFor = (wtPath) => reviewComments.get(wtPath) || [];
+
+  function renderDiff(editLine) {
+    const box = $('diff');
+    const comments = commentsFor(selected);
+    let newLine = 0;
+    const lines = lastDiffText.split('\n').map((l) => {
+      const hunk = l.match(/^@@ -\d+(?:,\d+)? \+(\d+)/);
+      if (hunk) newLine = Number(hunk[1]);
+      const meta = /^(diff |index |--- |\+\+\+ |new file|deleted file)/.test(l);
+      const cls = hunk ? 'hunk' : meta ? 'meta-line' : l.startsWith('+') ? 'add' : l.startsWith('-') ? 'del' : '';
+      let ln = null;
+      if (!hunk && !meta && newLine && (l.startsWith('+') || l.startsWith(' '))) ln = newLine++;
+      const notes = ln ? comments.map((c, i) => [c, i]).filter(([c]) => c.file === selectedFile && c.line === ln).map(([c, i]) => `<div class="cm-note"><span>💬 ${esc(c.text)}</span><button data-uncomment="${i}" title="Supprimer ce commentaire">✕</button></div>`).join('') : '';
+      const editor = ln && ln === editLine ? `<div class="cm-edit"><textarea id="cm-text" placeholder="Ta remarque sur la ligne ${ln}"></textarea><div class="row-btn"><button class="btn primary" data-cm-save="${ln}">Ajouter</button><button class="btn" data-cm-cancel="1">Annuler</button></div></div>` : '';
+      return `<div class="line ${cls}" ${ln ? `data-ln="${ln}"` : ''}>${ln ? `<button class="cm-add" data-comment="${ln}" title="Commenter la ligne ${ln}">+</button>` : ''}${esc(l) || ' '}</div>${notes}${editor}`;
+    }).join('');
+    const bar = comments.length ? `<div class="review-bar">💬 ${comments.length} commentaire${comments.length > 1 ? 's' : ''} en attente<button class="btn primary" id="cm-send">Envoyer à Claude</button><button class="btn" id="cm-clear">Vider</button></div>` : '';
+    box.innerHTML = bar + (lines || '<div class="placeholder">Pas de diff</div>');
+    if (editLine) $('cm-text')?.focus();
+  }
+
+  function addComment(line) {
+    const text = $('cm-text')?.value.trim();
+    if (!text) return;
+    const raw = lastDiffText.split('\n');
+    let newLine = 0;
+    let code = '';
+    for (const l of raw) {
+      const hunk = l.match(/^@@ -\d+(?:,\d+)? \+(\d+)/);
+      if (hunk) { newLine = Number(hunk[1]); continue; }
+      if (newLine && (l.startsWith('+') || l.startsWith(' ')) && !l.startsWith('+++')) {
+        if (newLine === line) { code = l.slice(1).trim(); break; }
+        newLine++;
+      }
+    }
+    reviewComments.set(selected, [...commentsFor(selected), { file: selectedFile, line, code: code.slice(0, 160), text }]);
+    renderDiff();
+  }
+
+  async function sendComments() {
+    const wt = currentWt();
+    const comments = commentsFor(selected);
+    const target = currentSession()?.live ? currentSession() : liveSession(wt);
+    if (!target) { toast('Aucune session pilotable dans ce worktree.', 'error'); return; }
+    const text = ['Commentaires de revue sur tes changements :', '', ...comments.map((c, i) => `${i + 1}. ${c.file}:${c.line}${c.code ? ` — \`${c.code}\`` : ''}\n   → ${c.text}`), '', 'Traite chaque point, puis résume ce que tu as changé.'].join('\n');
+    const result = await post('/api/deliver', { target: target.sessionId, text });
+    if (!result.ok) { toast(result.data.error || 'Envoi impossible.', 'error'); return; }
+    reviewComments.delete(selected);
+    renderDiff();
+    toast(result.data.outcome === 'queued' ? 'Commentaires mis en file : ils partent à la fin du tour en cours.' : 'Commentaires envoyés à Claude.');
   }
 
   async function refresh() {
@@ -1244,19 +1885,23 @@
     }
     if (selected && selected !== SHELL && selected !== USAGE && !currentWt()) selected = null;
     renderCounters(); renderGrid(); renderPanel();
+    updateTitle();
+    checkEvents();
     if (selected === USAGE) loadUsage();
     if (currentWt() && tab === 'chat') loadChat(false);
+    if (currentWt() && tab === 'checks' && Date.now() - checksLoadedAt > 20000) loadChecks();
   }
 
   function select(target) {
     selected = target; selectedFile = null; chatSession = null; chatSignature = null; chatBarSignature = null; reportSignature = null;
+    since = null; sinceFiles = null; lastDiffText = ''; checksLoadedAt = 0;
     if (target === SHELL && tab !== 'app') tab = 'term';
     if (target === USAGE) tab = 'usage';
     if (currentWt()?.review?.report) tab = 'report';
     renderGrid(); renderPanel();
     if (tab === 'app') loadScreen();
     if (target === USAGE) loadUsage();
-    else if (target !== SHELL) { loadDiff(); if (tab === 'chat') loadChat(true); }
+    else if (target !== SHELL) { loadDiff(); if (tab === 'chat') loadChat(true); if (tab === 'checks') loadChecks(); }
     if (tab === 'term') { loadScreen(); $('screen').focus(); }
   }
 
@@ -1292,10 +1937,12 @@
     if (!text || !chatSession) return;
     hideSuggest();
     $('composer-send').disabled = true;
-    const result = await post('/api/send', { target: chatSession, text });
+    const queue = currentSession()?.status === 'working';
+    const result = await post(queue ? '/api/queue' : '/api/send', { target: chatSession, text });
     $('composer-send').disabled = false;
     if (!result.ok) { toast(result.data.error || 'Envoi impossible.', 'error'); return; }
     input.value = '';
+    if (queue) toast('Message mis en file : il part dès que Claude a fini son tour.');
     setTimeout(() => { loadChat(true); refresh(); }, 900);
   }
 
@@ -1312,12 +1959,60 @@
     $('close-dialog').showModal();
   }
 
-  $('grid').addEventListener('click', (e) => {
+  $('grid').addEventListener('click', async (e) => {
     const closeBtn = e.target.closest('[data-close]');
     if (closeBtn) { e.stopPropagation(); openClose(closeBtn.dataset.close); return; }
-    const c = e.target.closest('.card');
+    const t = e.target;
+    if (t.closest('form.quick')) return;
+    const pin = t.closest('[data-pin]');
+    if (pin) {
+      pins.has(pin.dataset.pin) ? pins.delete(pin.dataset.pin) : pins.add(pin.dataset.pin);
+      localSet('pins', JSON.stringify([...pins]));
+      renderGrid();
+      return;
+    }
+    const pick = t.closest('[data-pick]');
+    if (pick) { pick.checked ? picked.add(pick.dataset.pick) : picked.delete(pick.dataset.pick); renderGrid(); return; }
+    const quickKey = t.closest('[data-quick-key]');
+    if (quickKey) {
+      const result = await post('/api/keys', { target: quickKey.dataset.session, ops: [{ literal: quickKey.dataset.quickKey }] });
+      toast(result.ok ? `Touche ${quickKey.dataset.quickKey} envoyée.` : result.data.error || 'Envoi impossible.', result.ok ? '' : 'error');
+      setTimeout(refresh, 800);
+      return;
+    }
+    const peek = t.closest('[data-peek]');
+    if (peek) { openPeeks.has(peek.dataset.peek) ? openPeeks.delete(peek.dataset.peek) : openPeeks.add(peek.dataset.peek); peek.classList.toggle('open'); return; }
+    const prBtn = t.closest('[data-pr]');
+    if (prBtn) { openPrDialog(prBtn.dataset.pr); return; }
+    const pushBtn = t.closest('[data-push]');
+    if (pushBtn) { pushCommits(pushBtn.dataset.push); return; }
+    const serveBtn = t.closest('[data-serve]');
+    if (serveBtn) { serveApp(serveBtn.dataset.serve); return; }
+    const archiveBtn = t.closest('[data-archive]');
+    if (archiveBtn) { archive(archiveBtn.dataset.archive); return; }
+    const unarchiveBtn = t.closest('[data-unarchive]');
+    if (unarchiveBtn) { unarchive(unarchiveBtn.dataset.unarchive, !!unarchiveBtn.dataset.resume); return; }
+    if (t.closest('.archives summary')) { setTimeout(() => { archivesOpen = !!document.querySelector('#grid .archives')?.open; }, 0); return; }
+    if (t.closest('a')) return;
+    const c = t.closest('.card');
     if (!c) return;
     select(c.dataset.shell ? SHELL : c.dataset.usage ? USAGE : c.dataset.path);
+  });
+
+  $('grid').addEventListener('submit', async (e) => {
+    const form = e.target.closest('form.quick');
+    if (!form) return;
+    e.preventDefault();
+    const input = form.querySelector('input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.disabled = true;
+    const result = await post('/api/deliver', { target: form.dataset.quick, text });
+    input.disabled = false;
+    if (!result.ok) { toast(result.data.error || 'Envoi impossible.', 'error'); return; }
+    input.value = '';
+    toast(result.data.outcome === 'queued' ? 'Message mis en file.' : 'Message envoyé à Claude.');
+    setTimeout(refresh, 900);
   });
 
   $('panel').addEventListener('change', (e) => {
@@ -1494,6 +2189,7 @@
     const review = newKind() === 'review';
     $('new-pr-label').hidden = !review;
     $('new-pr').required = review;
+    $('new-variants-label').hidden = review || !!delegateParent;
     $('new-prompt').placeholder = review ? 'Consignes en plus pour la review (optionnel)' : 'Ce que Claude doit faire';
   }
 
@@ -1503,20 +2199,29 @@
     if (n && (!$('new-worktree').value || /^review-\d*$/.test($('new-worktree').value))) $('new-worktree').value = `review-${n[1]}`;
   });
 
-  $('new-btn').addEventListener('click', () => { $('new-form').reset(); syncNewKind(); $('new-dialog').showModal(); $('new-worktree').focus(); });
+  $('new-btn').addEventListener('click', () => openNewSession());
 
   document.querySelectorAll('dialog [data-dismiss]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
 
   $('new-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const worktree = $('new-worktree').value.trim();
+    const variants = newKind() === 'session' && !delegateParent ? Math.max(1, Math.min(5, Number($('new-variants').value) || 1)) : 1;
+    const names = variants > 1 ? Array.from({ length: variants }, (_, i) => `${worktree}-v${i + 1}`) : [worktree];
+    const parent = delegateParent ? { sessionId: delegateParent.sessionId, notify: $('new-notify').checked } : null;
     $('new-submit').disabled = true;
-    const result = await post('/api/start', { worktree, prompt: $('new-prompt').value, kind: newKind(), pr: $('new-pr').value });
+    const started = [];
+    for (const name of names) {
+      const result = await post('/api/start', { worktree: name, prompt: $('new-prompt').value, kind: newKind(), pr: $('new-pr').value, parent });
+      if (!result.ok) { toast(`${name} : ${result.data.error || 'lancement impossible'}`, 'error'); break; }
+      started.push(name);
+    }
     $('new-submit').disabled = false;
-    if (!result.ok) { toast(result.data.error || 'Lancement impossible.', 'error'); return; }
+    if (!started.length) return;
     $('new-dialog').close();
-    pendingSelect = worktree;
-    toast(`Session lancée dans tmux (${result.data.session}). Elle s'ouvre dès qu'elle a démarré.`);
+    delegateParent = null;
+    pendingSelect = started[0];
+    toast(started.length > 1 ? `${started.length} variantes lancées : ${started.join(', ')}.` : `Session lancée dans tmux (${started[0]}). Elle s'ouvre dès qu'elle a démarré.`);
     setTimeout(refresh, 2500);
   });
 
@@ -1545,6 +2250,586 @@
     if (e.key !== 'Escape' || !selected) return;
     if (document.activeElement === $('screen') || document.querySelector('dialog[open]')) return;
     closePanel();
+  });
+
+  const CHECK_LABEL = { failing: 'ÉCHEC', pending: 'EN COURS', passing: 'OK' };
+  const REVIEW_LABEL = { APPROVED: 'Approuvée', CHANGES_REQUESTED: 'Changements demandés', REVIEW_REQUIRED: 'Review requise' };
+
+  async function loadChecks() {
+    const wt = currentWt();
+    if (!wt) return;
+    checksLoadedAt = Date.now();
+    if (!$('checks').innerHTML) $('checks').innerHTML = '<div class="placeholder">Chargement de la PR…</div>';
+    const res = await api(`/api/checks?wt=${encodeURIComponent(wt.path)}`).catch(() => null);
+    if (currentWt()?.path !== wt.path) return;
+    const data = res?.ok ? await res.json() : null;
+    if (!data) { $('checks').innerHTML = '<div class="placeholder">Impossible de lire la PR (gh absent ou non connecté).</div>'; return; }
+    if (data.none) {
+      $('checks').innerHTML = `<div class="placeholder">Pas de PR pour ⎇ ${esc(wt.branch)}.<br><br><button class="btn primary" data-pr="${esc(wt.path)}">Pousser et ouvrir la PR</button></div>`;
+      return;
+    }
+    const blockers = [
+      data.failing && `${data.failing} check${data.failing > 1 ? 's' : ''} en échec`,
+      data.pending && `${data.pending} check${data.pending > 1 ? 's' : ''} en cours`,
+      data.review !== 'APPROVED' && (REVIEW_LABEL[data.review] || 'Review attendue'),
+      data.mergeable === 'CONFLICTING' && 'Conflits avec la base',
+      data.draft && 'PR en draft',
+    ].filter(Boolean);
+    const open = data.state === 'OPEN';
+    const duration = (c) => (c.startedAt && c.completedAt ? ` · ${Math.max(1, Math.round((Date.parse(c.completedAt) - Date.parse(c.startedAt)) / 1000))} s` : '');
+    const checks = [...data.checks].sort((a, b) => ['failing', 'pending', 'passing'].indexOf(a.state) - ['failing', 'pending', 'passing'].indexOf(b.state));
+    $('checks').innerHTML = `
+      <div class="report-head"><div class="pr"><a href="${esc(data.url)}" target="_blank" rel="noopener">#${data.number} · ${esc(data.title)} ↗</a></div>
+        <div class="sub">${esc(data.head || '')} → ${esc(data.base || '')} · ${esc(data.state)}${data.review ? ` · ${esc(REVIEW_LABEL[data.review] || data.review)}` : ''}</div></div>
+      ${open ? `<div class="ready ${blockers.length ? 'no' : ''}">${blockers.length ? `Pas encore prête : ${esc(blockers.join(' · '))}` : 'Prête à merger'}</div>` : ''}
+      ${currentWt()?.ahead ? `<div class="card-actions"><button class="btn" data-push="${esc(wt.path)}">Pousser ${currentWt().ahead} commit${currentWt().ahead > 1 ? 's' : ''} non poussé${currentWt().ahead > 1 ? 's' : ''}</button></div>` : ''}
+      <section><h3 class="sub-title">Checks (${data.checks.length})</h3>
+        ${checks.map((c) => `<div class="check-row"><span class="state ${c.state}">${CHECK_LABEL[c.state]}</span><span class="grow">${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.name)}</a>` : esc(c.name)}${duration(c)}</span>${c.state === 'failing' ? `<button class="btn" data-sendcheck="${esc(c.name)}">Envoyer l'échec à Claude</button>` : ''}</div>`).join('') || '<p class="hint">Aucun check.</p>'}
+      </section>
+      ${data.reviews?.length ? `<section><h3 class="sub-title">Reviews</h3>${data.reviews.map((r) => `<div class="check-row"><span class="state ${r.state === 'APPROVED' ? 'passing' : r.state === 'CHANGES_REQUESTED' ? 'failing' : 'pending'}">${esc(r.state)}</span><span class="grow"><b>${esc(r.author)}</b> ${esc(r.body)}</span></div>`).join('')}</section>` : ''}`;
+  }
+
+  async function openPrDialog(wtPath) {
+    const res = await api(`/api/pr-draft?wt=${encodeURIComponent(wtPath)}`).catch(() => null);
+    if (!res?.ok) { toast('Impossible de préparer la PR.', 'error'); return; }
+    const draft = await res.json();
+    $('pr-form').dataset.path = wtPath;
+    $('pr-title').value = draft.title;
+    $('pr-body').value = draft.body;
+    $('pr-labels').value = draft.labels.join(', ');
+    $('pr-assignee').value = draft.assignee;
+    $('pr-draft').checked = false;
+    $('pr-info').textContent = `⎇ ${draft.branch} → ${draft.base} · ${draft.commits.length} commit${draft.commits.length > 1 ? 's' : ''} : ${draft.commits.slice(0, 5).join(' · ')}${draft.commits.length > 5 ? '…' : ''}`;
+    $('pr-dialog').showModal();
+    $('pr-title').focus();
+  }
+
+  async function pushCommits(wtPath) {
+    const wt = state.worktrees.find((w) => w.path === wtPath);
+    if (!wt || !confirm(`Pousser ${wt.ahead} commit${wt.ahead > 1 ? 's' : ''} de ⎇ ${wt.branch} sur origin ?`)) return;
+    const result = await post('/api/push', { path: wtPath });
+    toast(result.ok ? 'Commits poussés.' : result.data.error || 'Push impossible.', result.ok ? '' : 'error');
+    refresh();
+  }
+
+  async function serveApp(wtPath) {
+    const wt = state.worktrees.find((w) => w.path === wtPath);
+    if (!wt) return;
+    if (!confirm(`Servir l'app depuis ${wt.name} ?\n\nLe checkout principal passe sur le commit ${wt.head} (HEAD détachée) et l'app redémarre. Les changements non commités de ${wt.name} ne sont pas inclus. « Revenir au checkout principal » dans l'onglet App remet tout en place.`)) return;
+    const result = await post('/api/app/serve', { path: wtPath });
+    toast(result.ok ? `L'app redémarre sur ${wt.name}.` : result.data.error || 'Bascule impossible.', result.ok ? '' : 'error');
+    refresh();
+  }
+
+  async function archive(wtPath) {
+    const wt = state.worktrees.find((w) => w.path === wtPath);
+    if (!wt || !confirm(`Archiver ${wt.name} ?\n\nLes sessions tmux s'arrêtent et le dossier est retiré. La branche ⎇ ${wt.branch || '(détachée)'} et la conversation sont gardées : « Restaurer » les remet en place.`)) return;
+    const result = await post('/api/archive', { path: wtPath });
+    toast(result.ok ? `${wt.name} archivé.` : result.data.error || 'Archivage impossible.', result.ok ? '' : 'error');
+    if (result.ok && selected === wtPath) closePanel();
+    refresh();
+  }
+
+  async function unarchive(name, resume) {
+    const result = await post('/api/unarchive', { name, resume });
+    toast(result.ok ? (result.data.warning || `${name} restauré${resume ? ', la session reprend dans tmux' : ''}.`) : result.data.error || 'Restauration impossible.', result.ok && !result.data.warning ? '' : 'error');
+    if (result.ok && resume) pendingSelect = name;
+    refresh();
+  }
+
+  async function openCleanup() {
+    $('cleanup-table').innerHTML = '<div class="placeholder">Analyse des worktrees…</div>';
+    if (!$('cleanup-dialog').open) $('cleanup-dialog').showModal();
+    const res = await api('/api/cleanup').catch(() => null);
+    cleanupRows = res?.ok ? await res.json() : [];
+    cleanupRows.sort((a, b) => a.lastActivity - b.lastActivity);
+    const size = (kb) => (kb == null ? '…' : kb > 1024 * 1024 ? `${(kb / 1024 / 1024).toFixed(1)} Go` : `${Math.round(kb / 1024)} Mo`);
+    $('cleanup-table').innerHTML = cleanupRows.length ? `<table class="cleanup-table"><thead><tr><th></th><th>Worktree</th><th>Branche</th><th>Inactif depuis</th><th>Taille</th><th>État</th></tr></thead><tbody>${cleanupRows.map((r, i) => {
+      const statuses = [
+        r.dirty ? `<span class="bad">${r.dirty} non commité${r.dirty > 1 ? 's' : ''}</span>` : '',
+        r.ahead && !r.merged ? `<span class="bad">${r.ahead} non poussé${r.ahead > 1 ? 's' : ''}</span>` : '',
+        r.merged ? '<span class="ok">mergée</span>' : '',
+        r.pr ? `PR #${r.pr.number} ${esc(r.pr.state.toLowerCase())}` : '',
+        r.live ? 'session ouverte' : '',
+      ].filter(Boolean).join(' · ') || 'propre';
+      return `<tr><td><input type="checkbox" data-cleanup="${i}" ${r.dirty || r.locked ? 'disabled' : ''} aria-label="Sélectionner ${esc(r.name)}"></td><td><b>${esc(r.name)}</b></td><td>${esc(r.branch || '—')}</td><td>${ago(r.lastActivity)}</td><td>${size(r.sizeKb)}</td><td>${statuses}</td></tr>`;
+    }).join('')}</tbody></table>` : '<div class="placeholder">Aucun worktree à nettoyer.</div>';
+    if (cleanupRows.some((r) => r.sizeKb == null)) setTimeout(() => { if ($('cleanup-dialog').open) openCleanup(); }, 8000);
+  }
+
+  async function bulkCleanup(mode) {
+    const rows = [...document.querySelectorAll('[data-cleanup]:checked')].map((b) => cleanupRows[Number(b.dataset.cleanup)]).filter(Boolean);
+    const eligible = mode === 'close' ? rows.filter((r) => r.merged && !r.dirty) : rows.filter((r) => !r.dirty);
+    if (!eligible.length) { toast(mode === 'close' ? 'Seules les branches mergées et propres peuvent être fermées ici.' : 'Rien à archiver dans la sélection.', 'error'); return; }
+    if (!confirm(`${mode === 'close' ? 'Fermer (et supprimer la branche mergée de)' : 'Archiver'} : ${eligible.map((r) => r.name).join(', ')} ?`)) return;
+    const failed = [];
+    for (const r of eligible) {
+      const result = await post(mode === 'close' ? '/api/close' : '/api/archive', { path: r.path, deleteBranch: true });
+      if (!result.ok) failed.push(`${r.name} : ${result.data.error || 'échec'}`);
+    }
+    toast(failed.length ? `Échecs : ${failed.join(' · ')}` : `${eligible.length} worktree${eligible.length > 1 ? 's' : ''} ${mode === 'close' ? 'fermé' : 'archivé'}${eligible.length > 1 ? 's' : ''}.`, failed.length ? 'error' : '');
+    refresh();
+    openCleanup();
+  }
+
+  function renderChatItems(items) {
+    return items.map((item) => {
+      if (item.kind === 'user') return `<div class="msg user">${escLink(item.text)}</div>`;
+      if (item.kind === 'assistant') return `<div class="msg assistant">${md(item.text)}</div>`;
+      return `<details class="tool"><summary><b>${esc(item.tool)}</b><span>${escLink(item.detail)}</span></summary>${item.result ? `<pre>${escLink(item.result)}</pre>` : ''}</details>`;
+    }).join('');
+  }
+
+  async function searchHistory() {
+    const q = $('history-q').value.trim();
+    $('history-list').innerHTML = '<div class="placeholder">Recherche…</div>';
+    const res = await api(`/api/history?q=${encodeURIComponent(q)}`).catch(() => null);
+    const list = res?.ok ? await res.json() : [];
+    if ($('history-q').value.trim() !== q) return;
+    $('history-list').innerHTML = list.length ? list.map((h) => `<div class="row clickable" data-history="${esc(h.sessionId)}">
+        <div class="top-line"><span class="grow">${esc(h.title || '(sans prompt)')}</span><span class="meta-line">${new Date(h.lastAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span></div>
+        <div class="meta-line">${esc(h.worktree)} · ⎇ ${esc(h.branch || '?')} · ${h.messages} messages${h.exists ? '' : ' · dossier supprimé'}${h.files.length ? ` · ${esc(h.files.slice(0, 3).join(', '))}${h.files.length > 3 ? '…' : ''}` : ''}</div>
+        ${h.snippet ? `<div class="snippet">… ${esc(h.snippet)} …</div>` : ''}
+      </div>`).join('') : '<div class="placeholder">Aucune session trouvée.</div>';
+  }
+
+  async function openHistoryItem(sessionId) {
+    const res = await api(`/api/history/chat?session=${encodeURIComponent(sessionId)}`).catch(() => null);
+    if (!res?.ok) { toast('Conversation introuvable.', 'error'); return; }
+    const chat = await res.json();
+    const lastAssistant = [...chat.items].reverse().find((i) => i.kind === 'assistant')?.text || '';
+    const title = chat.items.find((i) => i.kind === 'user')?.text || '';
+    $('history-list').hidden = true;
+    $('history-back').hidden = false;
+    $('history-view').hidden = false;
+    $('history-view').innerHTML = `<div class="card-actions"><button class="btn primary" data-history-resume="${esc(sessionId)}">Reprendre cette session</button><button class="btn" id="history-context">Nouvelle session avec ce contexte</button></div><div class="history-chat">${renderChatItems(chat.items)}</div>`;
+    $('history-context').onclick = () => {
+      $('history-dialog').close();
+      openNewSession({ prompt: `Reprends le contexte d'une session précédente.\n\nSa demande initiale :\n${title.slice(0, 600)}\n\nSon dernier message :\n${lastAssistant.slice(0, 1500)}\n\nSuite : ` });
+    };
+  }
+
+  function openHistory() {
+    $('history-list').hidden = false;
+    $('history-view').hidden = true;
+    $('history-back').hidden = true;
+    if (!$('history-dialog').open) $('history-dialog').showModal();
+    $('history-q').focus();
+    searchHistory();
+  }
+
+  function openNewSession({ prompt = '', parent = null } = {}) {
+    $('new-form').reset();
+    syncNewKind();
+    delegateParent = parent;
+    $('new-prompt').value = prompt;
+    $('new-parent').hidden = !parent;
+    $('new-notify-label').hidden = !parent;
+    $('new-variants-label').hidden = !!parent;
+    if (parent) $('new-parent').textContent = `Session déléguée depuis ${parent.worktree} : elle apparaîtra liée à sa session parente.`;
+    $('new-dialog').showModal();
+    $('new-worktree').focus();
+  }
+
+  function delegate(index) {
+    const item = chatItems[index];
+    const wt = currentWt();
+    const s = currentSession();
+    if (!item || !wt || !s) return;
+    openNewSession({ parent: { sessionId: s.sessionId, worktree: wt.name }, prompt: `Contexte (session parente « ${wt.name} », branche ${wt.branch || '?'}) :\n> ${item.text.slice(0, 1200).replace(/\n/g, '\n> ')}\n\nSous-tâche : ` });
+  }
+
+  function openBroadcast() {
+    const targets = [...picked].map((p) => state.worktrees.find((w) => w.path === p)).filter(Boolean);
+    const live = targets.filter((w) => liveSession(w));
+    if (!live.length) { toast('Aucune session pilotable dans la sélection.', 'error'); return; }
+    $('broadcast-targets').textContent = `${live.length} session${live.length > 1 ? 's' : ''} : ${live.map((w) => w.name).join(', ')}${targets.length > live.length ? ` (${targets.length - live.length} sans session pilotable, ignorée${targets.length - live.length > 1 ? 's' : ''})` : ''}`;
+    $('broadcast-form').dataset.targets = JSON.stringify(live.map((w) => liveSession(w).sessionId));
+    $('broadcast-dialog').showModal();
+    $('broadcast-text').focus();
+  }
+
+  function describeSchedule(a) {
+    if (a.schedule.type === 'interval') return `toutes les ${a.schedule.minutes} min`;
+    const names = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
+    return `à ${a.schedule.time}, ${a.schedule.days.length === 7 ? 'tous les jours' : a.schedule.days.map((d) => names[d]).join(' ')}`;
+  }
+
+  async function openAutomations() {
+    if (!$('auto-dialog').open) $('auto-dialog').showModal();
+    const res = await api('/api/automations').catch(() => null);
+    const list = res?.ok ? await res.json() : [];
+    const when = (t) => new Date(t).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const runState = (a) => {
+      if (!a.enabled) return ['paused', 'En pause'];
+      if (!a.lastRun) return ['never', 'Jamais lancée'];
+      return a.lastOk === false ? ['failed', 'Dernier lancement en échec'] : ['ran', 'Lancée'];
+    };
+    const sessionLine = (a) => {
+      const wt = a.lastWorktree && state.worktrees.find((w) => w.name === a.lastWorktree);
+      if (!a.lastWorktree) return '';
+      if (!wt) return ` · session : worktree ${esc(a.lastWorktree)} fermé`;
+      return ` · session : <b>${esc(STATUS[sessionStatus(wt)].label)}</b> dans ${esc(wt.name)}`;
+    };
+    const notice = state.tick ? '' : '<div class="notice">Ce serveur tourne sans boucle de fond (COCKPIT_NO_TICK=1) : les automatisations ne se lancent pas toutes seules ici. « Lancer maintenant » fonctionne.</div>';
+    $('auto-list').innerHTML = notice + (list.length ? list.map((a) => `<div class="row">
+        <div class="top-line"><span class="grow">${esc(a.name)}</span><span class="auto-state ${runState(a)[0]}">${runState(a)[1]}</span></div>
+        <div class="meta-line">${esc(describeSchedule(a))} · worktree ${esc(a.worktree)}${a.newWorktree ? '-<date>' : ''}</div>
+        <div class="meta-line">${a.nextRun ? `Prochain lancement : <b>${a.nextRun - Date.now() < 60000 ? (state.tick ? 'maintenant' : 'maintenant, mais la boucle de fond est désactivée ici') : esc(when(a.nextRun))}</b>` : 'Pas de prochain lancement'}${a.lastRun ? ` · dernier : ${esc(when(a.lastRun))} (${esc(a.lastResult || '')})` : ''}${sessionLine(a)}</div>
+        <div class="meta-line">${esc(a.prompt.slice(0, 200))}</div>
+        <div class="actions-line"><button class="btn" data-arun="${esc(a.id)}">Lancer maintenant</button><button class="btn" data-aedit="${esc(a.id)}">Modifier</button><button class="btn" data-atoggle="${esc(a.id)}">${a.enabled ? 'Mettre en pause' : 'Activer'}</button><button class="btn" data-adel="${esc(a.id)}">Supprimer</button></div>
+      </div>`).join('') : '<p class="text">Aucune automatisation. Une automatisation lance une session Claude avec un prompt, à heure fixe ou à intervalle régulier, même quand la page est fermée.</p>');
+    $('auto-list').dataset.items = JSON.stringify(list);
+  }
+
+  function fillAutomationForm(a) {
+    editingAutomation = a?.id || null;
+    $('auto-form-title').textContent = a ? `Modifier « ${a.name} »` : 'Nouvelle automatisation';
+    $('auto-name').value = a?.name || '';
+    $('auto-worktree').value = a?.worktree || '';
+    $('auto-new').checked = !!a?.newWorktree;
+    $('auto-prompt').value = a?.prompt || '';
+    $('auto-type').value = a?.schedule.type || 'daily';
+    $('auto-time').value = a?.schedule.time || '09:00';
+    $('auto-minutes').value = a?.schedule.minutes || 60;
+    const days = a?.schedule.days || [1, 2, 3, 4, 5];
+    document.querySelectorAll('#auto-days input').forEach((c) => { c.checked = days.includes(Number(c.value)); });
+    syncAutoType();
+  }
+
+  function syncAutoType() {
+    const daily = $('auto-type').value === 'daily';
+    $('auto-time-label').hidden = !daily;
+    $('auto-days').hidden = !daily;
+    $('auto-minutes-label').hidden = daily;
+  }
+
+  function buildPalette() {
+    const items = [];
+    const wt = currentWt();
+    for (const w of state.worktrees) items.push({ label: `Aller à ${w.name}`, kind: w.branch || '', run: () => select(w.path) });
+    if (wt) {
+      for (const b of document.querySelectorAll('#tabs button')) items.push({ label: `Onglet ${b.textContent.trim()}`, kind: wt.name, run: () => b.click() });
+      if (!isBase(wt) && state.pr?.enabled && wt.pr?.state !== 'OPEN') items.push({ label: 'Pousser et ouvrir la PR', kind: wt.name, run: () => openPrDialog(wt.path) });
+      if (wt.name !== 'main') items.push({ label: 'Archiver ce worktree', kind: wt.name, run: () => archive(wt.path) });
+      if (state.app && wt.name !== 'main') items.push({ label: "Servir l'app depuis ce worktree", kind: wt.name, run: () => serveApp(wt.path) });
+    }
+    items.push(
+      { label: 'Nouvelle session', kind: 'action', run: () => openNewSession() },
+      { label: 'Historique des sessions', kind: 'action', run: openHistory },
+      { label: 'Notifications', kind: 'action', run: openInbox },
+      { label: 'Nettoyage des worktrees', kind: 'action', run: openCleanup },
+      { label: 'Automatisations', kind: 'action', run: openAutomations },
+      { label: 'Écrire à plusieurs sessions', kind: 'action', run: startSelecting },
+      { label: order === 'state' ? 'Ordre fixe' : 'Grouper par état', kind: 'affichage', run: () => setOrder(order === 'state' ? 'fixed' : 'state') },
+      { label: 'Terminal', kind: 'outil', run: () => select(SHELL) },
+      { label: 'Tokens', kind: 'outil', run: () => select(USAGE) },
+      { label: 'Raccourcis clavier', kind: 'aide', run: () => $('help-dialog').showModal() },
+    );
+    return items;
+  }
+
+  function fuzzy(text, query) {
+    let i = 0;
+    const t = text.toLowerCase();
+    for (const ch of query.toLowerCase()) {
+      i = t.indexOf(ch, i);
+      if (i < 0) return false;
+      i++;
+    }
+    return true;
+  }
+
+  function renderPalette() {
+    const q = $('palette-q').value.trim();
+    const items = buildPalette().filter((it) => !q || fuzzy(`${it.label} ${it.kind}`, q));
+    paletteItems = items.slice(0, 40);
+    paletteIndex = Math.min(paletteIndex, Math.max(0, paletteItems.length - 1));
+    $('palette-list').innerHTML = paletteItems.map((it, i) => `<button data-palette="${i}" class="${i === paletteIndex ? 'on' : ''}">${esc(it.label)}<span class="kind">${esc(it.kind)}</span></button>`).join('') || '<div class="placeholder">Rien ne correspond.</div>';
+    $('palette-list').querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function openPalette() {
+    $('palette-q').value = '';
+    paletteIndex = 0;
+    if (!$('palette-dialog').open) $('palette-dialog').showModal();
+    renderPalette();
+    $('palette-q').focus();
+  }
+
+  function runPalette(i) {
+    const it = paletteItems[i];
+    if (!it) return;
+    $('palette-dialog').close();
+    it.run();
+  }
+
+  function setOrder(value) {
+    order = value;
+    localSet('order', order);
+    renderGrid();
+  }
+
+  function startSelecting() {
+    selecting = true;
+    picked.clear();
+    renderGrid();
+  }
+
+  function stopSelecting() {
+    selecting = false;
+    picked.clear();
+    renderGrid();
+  }
+
+  function moveFocus(delta) {
+    const cards = [...document.querySelectorAll('#grid .card')];
+    if (!cards.length) return;
+    focusIndex = Math.max(0, Math.min(cards.length - 1, focusIndex < 0 ? 0 : focusIndex + delta));
+    cards.forEach((c, i) => c.classList.toggle('focused', i === focusIndex));
+    cards[focusIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  const focusedCard = () => document.querySelectorAll('#grid .card')[focusIndex] || null;
+
+  $('panel').addEventListener('click', async (e) => {
+    const t = e.target;
+    const dequeueBtn = t.closest('[data-dequeue]');
+    if (dequeueBtn) { await post('/api/queue/remove', { target: chatSession, id: dequeueBtn.dataset.dequeue }); refresh(); return; }
+    const sinceLink = t.closest('[data-since]');
+    if (sinceLink) { since = sinceLink.dataset.since; selectedFile = null; tab = 'changes'; renderTabs(); loadSince(); return; }
+    if (t.id === 'restore-btn') {
+      if (!confirm('Restaurer les fichiers suivis du worktree dans leur état d’avant ce tour ?\n\nLes modifications faites depuis sur ces fichiers sont perdues. Les nouveaux fichiers non suivis restent en place.')) return;
+      const result = await post('/api/restore', { path: selected, sha: since });
+      toast(result.ok ? 'Point restauré.' : result.data.error || 'Restauration impossible.', result.ok ? '' : 'error');
+      since = null;
+      loadSince();
+      refresh();
+      return;
+    }
+    const delegateBtn = t.closest('[data-delegate]');
+    if (delegateBtn) { delegate(Number(delegateBtn.dataset.delegate)); return; }
+    const commentBtn = t.closest('[data-comment]');
+    if (commentBtn) { renderDiff(Number(commentBtn.dataset.comment)); return; }
+    const saveBtn = t.closest('[data-cm-save]');
+    if (saveBtn) { addComment(Number(saveBtn.dataset.cmSave)); return; }
+    if (t.closest('[data-cm-cancel]')) { renderDiff(); return; }
+    const uncomment = t.closest('[data-uncomment]');
+    if (uncomment) { const list = commentsFor(selected); list.splice(Number(uncomment.dataset.uncomment), 1); reviewComments.set(selected, list); renderDiff(); return; }
+    if (t.id === 'cm-send') { sendComments(); return; }
+    if (t.id === 'cm-clear') { if (confirm('Supprimer les commentaires en attente ?')) { reviewComments.delete(selected); renderDiff(); } return; }
+    const fixBtn = t.closest('[data-fixblock]');
+    if (fixBtn) {
+      const b = reportBlocks[Number(fixBtn.dataset.fixblock)];
+      const target = liveSession(currentWt());
+      if (!b || !target) { toast('Aucune session pilotable dans ce worktree.', 'error'); return; }
+      const text = [`Corrige ce point de la review : ${b.title}${b.file ? ` (${b.file}${b.line ? `:${b.line}` : ''})` : ''}`, b.finding && `Constat : ${b.finding}`, b.fix && `Correctif proposé : ${b.fix}`].filter(Boolean).join('\n\n');
+      const result = await post('/api/deliver', { target: target.sessionId, text });
+      toast(result.ok ? (result.data.outcome === 'queued' ? 'Demande mise en file.' : 'Demande envoyée à Claude.') : result.data.error || 'Envoi impossible.', result.ok ? '' : 'error');
+      return;
+    }
+    const showDiff = t.closest('[data-showdiff]');
+    if (showDiff) {
+      const b = reportBlocks[Number(showDiff.dataset.showdiff)];
+      const match = currentWt()?.files.find((f) => f.path === b.file || b.file.endsWith(`/${f.path}`) || f.path.endsWith(`/${b.file}`));
+      if (!match) { toast('Ce fichier n’a pas de changement local dans ce worktree.', 'error'); return; }
+      since = null; selectedFile = match.path; tab = 'changes'; renderTabs(); renderPanel();
+      await loadDiff();
+      document.querySelector(`#diff .line[data-ln="${Number(b.line)}"]`)?.scrollIntoView({ block: 'center' });
+      return;
+    }
+    const sendCheck = t.closest('[data-sendcheck]');
+    if (sendCheck) {
+      sendCheck.disabled = true;
+      const result = await post('/api/checks/send', { path: selected, check: sendCheck.dataset.sendcheck });
+      sendCheck.disabled = false;
+      toast(result.ok ? (result.data.outcome === 'queued' ? 'Échec mis en file pour Claude.' : 'Échec envoyé à Claude.') : result.data.error || 'Envoi impossible.', result.ok ? '' : 'error');
+      return;
+    }
+    const prBtn = t.closest('[data-pr]');
+    if (prBtn) { openPrDialog(prBtn.dataset.pr); return; }
+    const pushBtn = t.closest('[data-push]');
+    if (pushBtn) { pushCommits(pushBtn.dataset.push); return; }
+    const serveBtn = t.closest('[data-serve]');
+    if (serveBtn) { serveApp(serveBtn.dataset.serve); }
+  });
+
+  $('panel').addEventListener('change', (e) => {
+    if (e.target.id !== 'since-select') return;
+    since = e.target.value || null;
+    selectedFile = null;
+    loadSince();
+  });
+
+  $('panel').addEventListener('click', (e) => {
+    const tabBtn = e.target.closest('#tabs button');
+    if (tabBtn?.dataset.tab === 'checks') loadChecks();
+  });
+
+  $('order-seg').addEventListener('click', (e) => { const b = e.target.closest('[data-order]'); if (b) setOrder(b.dataset.order); });
+  $('bell-btn').addEventListener('click', openInbox);
+  $('tools-menu').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tool]');
+    if (!b) return;
+    $('tools-menu').open = false;
+    ({ history: openHistory, cleanup: openCleanup, automations: () => { fillAutomationForm(null); openAutomations(); }, select: startSelecting, palette: openPalette, help: () => $('help-dialog').showModal() })[b.dataset.tool]?.();
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#tools-menu')) $('tools-menu').open = false; });
+
+  $('inbox-filter').addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { inboxFilter = b.dataset.f; renderInbox(); } });
+  $('inbox-list').addEventListener('click', (e) => {
+    const row = e.target.closest('[data-event]');
+    const ev = row && inboxEvents.find((x) => x.id === Number(row.dataset.event));
+    if (ev) openEvent(ev);
+  });
+  $('inbox-readall').addEventListener('click', async () => { await post('/api/events/read', { all: true }); await loadEvents(); renderInbox(); refresh(); });
+  $('inbox-os').addEventListener('click', async () => { if ('Notification' in window) await Notification.requestPermission(); renderInbox(); });
+
+  $('history-q').addEventListener('input', () => { clearTimeout(historyTimer); historyTimer = setTimeout(searchHistory, 350); });
+  $('history-list').addEventListener('click', (e) => { const row = e.target.closest('[data-history]'); if (row) openHistoryItem(row.dataset.history); });
+  $('history-back').addEventListener('click', () => { $('history-view').hidden = true; $('history-list').hidden = false; $('history-back').hidden = true; });
+  $('history-view').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-history-resume]');
+    if (!b) return;
+    b.disabled = true;
+    const result = await post('/api/history/resume', { session: b.dataset.historyResume });
+    b.disabled = false;
+    if (!result.ok) { toast(result.data.error || 'Reprise impossible.', 'error'); return; }
+    $('history-dialog').close();
+    pendingSelect = result.data.worktree;
+    toast(`Session reprise dans tmux (${result.data.worktree}).`);
+    setTimeout(refresh, 2500);
+  });
+
+  $('cleanup-archive').addEventListener('click', () => bulkCleanup('archive'));
+  $('cleanup-close').addEventListener('click', () => bulkCleanup('close'));
+
+  $('auto-type').addEventListener('change', syncAutoType);
+  $('auto-reset').addEventListener('click', () => fillAutomationForm(null));
+  $('auto-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const item = {
+      id: editingAutomation,
+      name: $('auto-name').value,
+      worktree: $('auto-worktree').value.trim(),
+      newWorktree: $('auto-new').checked,
+      prompt: $('auto-prompt').value,
+      tzOffsetMin: new Date().getTimezoneOffset(),
+      schedule: $('auto-type').value === 'daily'
+        ? { type: 'daily', time: $('auto-time').value, days: [...document.querySelectorAll('#auto-days input:checked')].map((c) => Number(c.value)) }
+        : { type: 'interval', minutes: Number($('auto-minutes').value) },
+    };
+    const result = await post('/api/automations/save', { item });
+    if (!result.ok) { toast(result.data.error || 'Enregistrement impossible.', 'error'); return; }
+    toast('Automatisation enregistrée.');
+    fillAutomationForm(null);
+    openAutomations();
+  });
+  $('auto-list').addEventListener('click', async (e) => {
+    const list = parseJson($('auto-list').dataset.items, []);
+    const find = (id) => list.find((a) => a.id === id);
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.arun) {
+      b.disabled = true;
+      const result = await post('/api/automations/run', { id: b.dataset.arun });
+      toast(result.ok ? `Lancée dans ${result.data.worktree}.` : result.data.error || 'Lancement impossible.', result.ok ? '' : 'error');
+      openAutomations();
+      refresh();
+    } else if (b.dataset.aedit) {
+      fillAutomationForm(find(b.dataset.aedit));
+      $('auto-name').focus();
+    } else if (b.dataset.atoggle) {
+      const a = find(b.dataset.atoggle);
+      await post('/api/automations/save', { item: { ...a, enabled: !a.enabled } });
+      openAutomations();
+    } else if (b.dataset.adel) {
+      if (!confirm(`Supprimer l'automatisation « ${find(b.dataset.adel)?.name} » ?`)) return;
+      await post('/api/automations/delete', { id: b.dataset.adel });
+      openAutomations();
+    }
+  });
+
+  $('pr-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('pr-submit').disabled = true;
+    $('pr-submit').textContent = 'Création…';
+    const result = await post('/api/pr', {
+      path: $('pr-form').dataset.path,
+      title: $('pr-title').value,
+      body: $('pr-body').value,
+      labels: $('pr-labels').value.split(',').map((l) => l.trim()).filter(Boolean),
+      assignee: $('pr-assignee').value.trim(),
+      draft: $('pr-draft').checked,
+    });
+    $('pr-submit').disabled = false;
+    $('pr-submit').textContent = 'Pousser et créer la PR';
+    if (!result.ok) { toast(result.data.error || 'Création impossible.', 'error'); return; }
+    $('pr-dialog').close();
+    const c = result.data.check;
+    const problems = c ? [!c.labels && 'labels manquants', !c.assignee && 'assignee manquant', !c.footer && 'footer « Generated with Claude Code » présent'].filter(Boolean) : [];
+    toast(problems.length ? `PR créée, à vérifier : ${problems.join(', ')}` : `PR créée : ${result.data.url}`, problems.length ? 'error' : '', () => window.open(result.data.url, '_blank', 'noopener'));
+    refresh();
+  });
+
+  $('broadcast-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const targets = parseJson($('broadcast-form').dataset.targets, []);
+    const result = await post('/api/broadcast', { targets, text: $('broadcast-text').value });
+    if (!result.ok) { toast(result.data.error || 'Envoi impossible.', 'error'); return; }
+    $('broadcast-dialog').close();
+    $('broadcast-text').value = '';
+    stopSelecting();
+    const r = result.data;
+    toast(`Envoyé à ${r.sent.length} · en file pour ${r.queued.length}${r.offline.length ? ` · ${r.offline.length} hors tmux` : ''}.`);
+    refresh();
+  });
+
+  $('select-write').addEventListener('click', openBroadcast);
+  $('select-cancel').addEventListener('click', stopSelecting);
+  $('select-idle').addEventListener('click', () => {
+    for (const w of state.worktrees) if (liveSession(w) && ['done', 'idle'].includes(liveSession(w).status)) picked.add(w.path);
+    renderGrid();
+  });
+
+  $('palette-q').addEventListener('input', () => { paletteIndex = 0; renderPalette(); });
+  $('palette-q').addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); paletteIndex = (paletteIndex + (e.key === 'ArrowDown' ? 1 : -1) + paletteItems.length) % Math.max(1, paletteItems.length); renderPalette(); }
+    else if (e.key === 'Enter') { e.preventDefault(); runPalette(paletteIndex); }
+    else if (e.key === 'Escape') { e.preventDefault(); $('palette-dialog').close(); }
+  });
+  $('palette-list').addEventListener('click', (e) => { const b = e.target.closest('[data-palette]'); if (b) runPalette(Number(b.dataset.palette)); });
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      if (document.activeElement === $('screen')) return;
+      e.preventDefault();
+      openPalette();
+      return;
+    }
+    const el = document.activeElement;
+    if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]') || el === $('screen') || el?.closest?.('input, textarea, select, [contenteditable]')) return;
+    const panelOpen = $('panel').classList.contains('open');
+    if (e.key === 'j' || e.key === 'k') { e.preventDefault(); moveFocus(e.key === 'j' ? 1 : -1); return; }
+    if (e.key === 'Enter' && focusedCard()) { e.preventDefault(); focusedCard().click(); return; }
+    if (e.key === ' ' && focusedCard()) {
+      e.preventDefault();
+      const peek = focusedCard().querySelector('[data-peek]');
+      if (peek) { openPeeks.has(peek.dataset.peek) ? openPeeks.delete(peek.dataset.peek) : openPeeks.add(peek.dataset.peek); peek.classList.toggle('open'); }
+      return;
+    }
+    if (e.key === 'a') {
+      const path = focusedCard()?.dataset.path || (panelOpen ? selected : null);
+      const wt = state.worktrees.find((w) => w.path === path);
+      const s = wt && liveSession(wt);
+      if (s?.status === 'needs_input') { post('/api/keys', { target: s.sessionId, ops: [{ literal: '1' }] }).then(() => { toast(`Permission accordée à ${wt.name}.`); setTimeout(refresh, 800); }); }
+      return;
+    }
+    if (/^[1-6]$/.test(e.key) && panelOpen) { document.querySelectorAll('#tabs button')[Number(e.key) - 1]?.click(); return; }
+    if (e.key === 'n') { e.preventDefault(); openNewSession(); return; }
+    if (e.key === 'H' || e.key === 'h') { e.preventDefault(); openHistory(); return; }
+    if (e.key === 'i') { openInbox(); return; }
+    if (e.key === '?') { $('help-dialog').showModal(); }
   });
 
   refresh();

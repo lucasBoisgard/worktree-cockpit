@@ -2,9 +2,38 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
 
 const STATE_DIR = path.join(os.homedir(), '.claude', 'worktree-state');
 const MAX_ACTIONS = 15;
+const MAX_CHECKPOINTS = 30;
+
+const CHECKPOINT_SCRIPT = `
+const fs = require('node:fs');
+const { execFileSync } = require('node:child_process');
+const [cwd, file, at, prompt, max] = process.argv.slice(1);
+const git = (args) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', timeout: 20000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+try {
+  const sha = git(['stash', 'create']) || git(['rev-parse', 'HEAD']);
+  let list = [];
+  try { list = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
+  list.push({ at: Number(at), sha, prompt });
+  const tmp = file + '.' + process.pid + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(list.slice(-Number(max))));
+  fs.renameSync(tmp, file);
+} catch {}
+`;
+
+function recordCheckpoint(sessionId, cwd, at, prompt) {
+  const file = path.join(STATE_DIR, `${sessionId}.checkpoints.json`);
+  spawn(process.execPath, ['-e', CHECKPOINT_SCRIPT, cwd, file, String(at), prompt, String(MAX_CHECKPOINTS)], { detached: true, stdio: 'ignore' }).unref();
+}
+
+function questionOf(input = {}) {
+  const first = Array.isArray(input.questions) ? input.questions[0] : null;
+  if (!first) return null;
+  return { text: shorten(first.question, 220), options: (first.options || []).map((o) => shorten(o.label, 60)).slice(0, 6), multi: !!first.multiSelect };
+}
 
 function shorten(text, max = 140) {
   const oneLine = String(text || '').replace(/\s+/g, ' ').trim();
@@ -82,23 +111,38 @@ process.stdin.on('end', () => {
         break;
       case 'UserPromptSubmit':
         state.status = 'working';
-        state.task = shorten(input.prompt, 220);
+        state.task = state.task || shorten(input.prompt, 220);
+        state.lastPrompt = shorten(input.prompt, 220);
         state.message = null;
+        state.question = null;
+        recordCheckpoint(input.session_id, cwd, now, shorten(input.prompt, 120));
         break;
       case 'PreToolUse':
-        state.status = 'working';
-        state.message = null;
         state.actions = [{ tool: input.tool_name, detail: describeTool(input.tool_name, input.tool_input, cwd), at: now }, ...(state.actions || [])].slice(0, MAX_ACTIONS);
+        if (input.tool_name === 'AskUserQuestion') {
+          state.question = questionOf(input.tool_input);
+          state.status = 'needs_input';
+          state.message = state.question?.text || 'Claude pose une question';
+        } else {
+          state.status = 'working';
+          state.message = null;
+          state.question = null;
+          state.permission = false;
+        }
         break;
       case 'Notification':
         if (input.notification_type === 'idle_prompt' || /waiting for your input/i.test(input.message || '')) return;
         state.status = 'needs_input';
         state.message = shorten(input.message, 220);
+        state.permission = /permission/i.test(input.message || '');
         break;
       case 'Stop':
         if (input.stop_hook_active) return;
         state.status = 'done';
         state.message = null;
+        state.question = null;
+        state.permission = false;
+        if (input.last_assistant_message) state.lastAssistant = shorten(input.last_assistant_message, 400);
         break;
       case 'SessionEnd':
         state.status = 'ended';
