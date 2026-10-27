@@ -922,7 +922,8 @@
     if (wt.added || wt.deleted) meta.push(`<span class="chip"><span class="plus">+${wt.added}</span> <span class="minus">−${wt.deleted}</span></span>`);
     if (wt.ahead) meta.push(`<span class="chip">↑ ${wt.ahead} non poussé${wt.ahead > 1 ? 's' : ''}</span>`);
     if (wt.behind) meta.push(`<span class="chip">↓ ${wt.behind}</span>`);
-    if (!wt.files.length && !wt.ahead) meta.push('<span class="chip">✓ propre</span>');
+    if (wt.staged) meta.push(`<span class="chip" title="Changements indexés, masqués dans Changements">● ${wt.staged} indexé${wt.staged > 1 ? 's' : ''}</span>`);
+    if (!wt.files.length && !wt.staged && !wt.ahead) meta.push('<span class="chip">✓ propre</span>');
     if (wt.locked) meta.push('<span class="chip">🔒 verrouillé</span>');
     if (wt.name !== 'main' && !wt.locked) meta.push(`<button class="card-close" data-close="${esc(wt.path)}" title="Fermer ce worktree">Fermer</button>`);
     return `<div class="card ${st} ${selected === wt.path ? 'selected' : ''}" data-path="${esc(wt.path)}">
@@ -993,7 +994,7 @@
     renderComposer(s);
     updateMode();
     const files = wt.files.map((f) => {
-      const code = f.code === '??' ? 'U' : f.code.replace('.', '').charAt(0);
+      const code = f.code === '??' ? 'U' : f.code.charAt(1);
       const stat = f.added || f.deleted ? `<span class="fstat"><span class="plus">+${f.added || 0}</span> <span class="minus">−${f.deleted || 0}</span></span>` : '';
       return `<div class="file ${selectedFile === f.path ? 'active' : ''}" data-file="${esc(f.path)}"><span class="code ${code}">${code}</span><span class="fpath">&lrm;${esc(f.path)}</span>${stat}</div>`;
     }).join('') || '<div class="tl"><span></span><span class="what">Aucun changement</span></div>';

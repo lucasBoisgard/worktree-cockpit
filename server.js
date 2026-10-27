@@ -244,13 +244,14 @@ function ownerOf(cwd, worktrees) {
 async function describe(wt) {
   const [status, numstat, lastCommit] = await Promise.all([
     git(wt.path, ['status', '--porcelain=v2', '--branch']),
-    git(wt.path, ['diff', 'HEAD', '--numstat']),
+    git(wt.path, ['diff', '--numstat']),
     git(wt.path, ['log', '-1', '--format=%s%x00%ct']),
   ]);
   const parsed = parseStatus(status);
   const stats = parseNumstat(numstat);
   const [subject, ts] = (lastCommit || '').trim().split('\0');
-  const files = parsed.files.map((f) => ({ ...f, ...(stats[f.path] || {}) }));
+  const isUnstaged = (f) => f.code.charAt(1) !== '.';
+  const files = parsed.files.filter(isUnstaged).map((f) => ({ ...f, ...(stats[f.path] || {}) }));
   return {
     name: worktreeName(wt.path),
     path: wt.path,
@@ -259,6 +260,7 @@ async function describe(wt) {
     detached: !!wt.detached,
     locked: !!wt.locked,
     files,
+    staged: parsed.files.filter((f) => f.code.charAt(0) !== '.' && !['??', 'UU'].includes(f.code)).length,
     added: files.reduce((sum, f) => sum + (f.added || 0), 0),
     deleted: files.reduce((sum, f) => sum + (f.deleted || 0), 0),
     ahead: parsed.ahead,
@@ -299,7 +301,7 @@ async function diff(wtPath, file) {
   const full = path.resolve(wtPath, file);
   if (!full.startsWith(`${wtPath}/`)) return null;
   const tracked = await git(wtPath, ['ls-files', '--error-unmatch', '--', file]);
-  if (tracked !== null) return (await git(wtPath, ['diff', 'HEAD', '--', file])) || '';
+  if (tracked !== null) return (await git(wtPath, ['diff', '--', file])) || '';
   const untracked = fs.statSync(full, { throwIfNoEntry: false })?.isDirectory()
     ? ((await git(wtPath, ['ls-files', '--others', '--exclude-standard', '--', file])) || '').split('\n').filter(Boolean)
     : [file];
