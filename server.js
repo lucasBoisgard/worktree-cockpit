@@ -89,6 +89,7 @@ async function listWorktrees() {
         const value = rest.join(' ');
         if (key === 'worktree') wt.path = value;
         if (key === 'branch') wt.branch = value.replace('refs/heads/', '');
+        if (key === 'HEAD') wt.head = value;
         if (key === 'detached') wt.detached = true;
         if (key === 'locked') {
           const claude = value.match(/^claude session .* \(pid (\d+) start (\d+)\)$/);
@@ -254,6 +255,7 @@ async function describe(wt) {
     name: worktreeName(wt.path),
     path: wt.path,
     branch: wt.branch || null,
+    head: wt.head ? wt.head.slice(0, 7) : null,
     detached: !!wt.detached,
     locked: !!wt.locked,
     files,

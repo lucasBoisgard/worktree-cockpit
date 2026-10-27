@@ -58,6 +58,11 @@
   .top { display: flex; align-items: flex-start; gap: 10px; }
   .name { font-weight: 650; font-size: 15px; word-break: break-all; }
   .branch { font-family: var(--mono); font-size: 12px; color: var(--muted); word-break: break-all; }
+  .branch-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; min-width: 0; }
+  .branch-chip { font: 600 12px var(--mono); color: var(--blue); background: var(--blue-bg); padding: 2px 8px; border-radius: 6px; word-break: break-all; }
+  .branch-chip.detached { color: var(--amber); background: var(--amber-bg); }
+  .branch-chip.changed { color: var(--amber); background: var(--amber-bg); box-shadow: 0 0 0 1px var(--amber); }
+  .on-branch { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .hint { font-size: 12px; color: var(--muted); }
   .badge { margin-left: auto; flex-shrink: 0; font-size: 11px; font-weight: 650; padding: 3px 8px; border-radius: 999px; background: var(--grey-bg); color: var(--muted); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
   .badge.needs_input { background: var(--amber-bg); color: var(--amber); }
@@ -508,6 +513,9 @@
   let chatBarSignature = null;
   let pendingSelect = null;
   let usageData = null;
+  const knownBranches = new Map();
+  const branchChanges = new Map();
+  const BRANCH_CHANGE_MS = 2 * 60 * 1000;
   let closing = null;
   let pendingOps = [];
   let flushTimer = null;
@@ -660,6 +668,27 @@
 
   const headEnd = (extra = '') => `<div class="head-end">${extra}${appButton()}<button class="close" id="close" title="Fermer">×</button></div>`;
 
+  const branchLabel = (wt) => wt.branch || `HEAD détachée @ ${wt.head || '?'}`;
+
+  function branchChip(wt) {
+    const change = branchChanges.get(wt.path);
+    const recent = change && Date.now() - change.at < BRANCH_CHANGE_MS;
+    const title = recent ? `Branche changée récemment (avant : ${change.from})` : 'Branche checkoutée dans ce worktree';
+    return `<span class="branch-chip ${wt.branch ? '' : 'detached'} ${recent ? 'changed' : ''}" title="${esc(title)}">⎇ ${esc(branchLabel(wt))}</span>`;
+  }
+
+  function trackBranches() {
+    for (const wt of state.worktrees) {
+      const current = branchLabel(wt);
+      const before = knownBranches.get(wt.path);
+      if (before !== undefined && before !== current) {
+        branchChanges.set(wt.path, { from: before, at: Date.now() });
+        toast(`${wt.name} : branche ${before} → ${current}`);
+      }
+      knownBranches.set(wt.path, current);
+    }
+  }
+
   function appPane() {
     if (!state.app) return '';
     const app = state.app;
@@ -678,7 +707,8 @@
       ['up', 'degraded', 'starting'].includes(app.state) ? `<a href="${esc(app.link)}" target="_blank" rel="noopener">Ouvrir l'app ↗</a>` : '',
     ].join('');
     return `<div class="app-info">
-        <div class="branch">App lancée depuis ${esc(state.repo)} · branche ${esc(main?.branch || '?')}</div>
+        <div class="branch">App lancée depuis ${esc(state.repo)} · branche ${esc(main ? branchLabel(main) : '?')}</div>
+        ${currentWt() && currentWt().name !== 'main' && main && branchLabel(currentWt()) !== branchLabel(main) ? `<div class="reason warn">Ce worktree est sur ⎇ ${esc(branchLabel(currentWt()))} : l'app sert ⎇ ${esc(branchLabel(main))}, pas ce worktree.</div>` : ''}
         ${lines.join('')}<div class="app-actions">${actions}</div>
       </div>`;
   }
@@ -893,7 +923,7 @@
     if (wt.name !== 'main' && !wt.locked) meta.push(`<button class="card-close" data-close="${esc(wt.path)}" title="Fermer ce worktree">Fermer</button>`);
     return `<div class="card ${st} ${selected === wt.path ? 'selected' : ''}" data-path="${esc(wt.path)}">
       <div class="top">
-        <div><div class="name">${esc(wt.name)}</div><div class="branch">${esc(wt.branch || 'HEAD détachée')}</div></div>
+        <div><div class="name">${esc(wt.name)}</div><div class="branch-row">${branchChip(wt)}</div></div>
         <span class="badge ${st}"><span class="dot"></span>${STATUS[st].label}${s ? ` · ${ago(s.updatedAt)}` : ''}</span>
       </div>
       ${s?.task ? `<div class="task">${esc(s.task)}</div>` : ''}
@@ -945,7 +975,7 @@
     const st = sessionStatus(wt);
     const s = currentSession();
     $('panel-head').innerHTML = `
-      <div><div class="name">${esc(wt.name)}</div><div class="branch">${esc(wt.branch || 'HEAD détachée')} · ${esc(wt.path)}</div></div>
+      <div><div class="name">${esc(wt.name)}</div><div class="branch-row">${branchChip(wt)}<span class="branch">${esc(wt.path)}</span></div></div>
       ${headEnd(`<span class="badge ${st}"><span class="dot"></span>${STATUS[st].label}</span>`)}`;
     renderReport(wt);
     renderChatBar(wt);
@@ -1074,12 +1104,14 @@
   }
 
   function renderChatBar(wt) {
-    const signature = `${wt.path}|${wt.sessions.map((s) => `${s.sessionId}:${s.live}`).join(',')}|${chatSession}`;
+    const chip = branchChip(wt);
+    const signature = `${wt.path}|${wt.sessions.map((s) => `${s.sessionId}:${s.live}`).join(',')}|${chatSession}|${chip}`;
     if (signature === chatBarSignature) return;
     chatBarSignature = signature;
-    if (!wt.sessions.length) { $('chat-bar').innerHTML = 'Aucune session suivie pour ce worktree.'; return; }
+    const onBranch = `<span class="on-branch">Sur ${chip}</span>`;
+    if (!wt.sessions.length) { $('chat-bar').innerHTML = `${onBranch} · Aucune session suivie pour ce worktree.`; return; }
     const options = wt.sessions.map((s) => `<option value="${esc(s.sessionId)}" ${s.sessionId === chatSession ? 'selected' : ''}>${s.live ? '⌨ ' : ''}${esc((s.task || 'Session sans prompt').slice(0, 70))} · ${ago(s.updatedAt)}</option>`).join('');
-    $('chat-bar').innerHTML = `<label for="session-select">Session</label><select id="session-select">${options}</select>`;
+    $('chat-bar').innerHTML = `${onBranch}<label for="session-select">Session</label><select id="session-select">${options}</select>`;
   }
 
   function renderComposer(s) {
@@ -1193,6 +1225,7 @@
       $('updated').textContent = 'serveur injoignable';
       return;
     }
+    trackBranches();
     if (pendingSelect) {
       const wt = state.worktrees.find((w) => w.name === pendingSelect && w.sessions.some((s) => s.live));
       if (wt) { select(wt.path); pendingSelect = null; }
