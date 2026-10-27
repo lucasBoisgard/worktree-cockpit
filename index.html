@@ -10,6 +10,7 @@
     --text: #1c2027; --muted: #6b7280; --faint: #9aa1ac;
     --blue: #2f6fec; --blue-bg: #e8f0fe; --amber: #b76e00; --amber-bg: #fff3dc;
     --green: #1f8a4c; --green-bg: #e4f5ea; --grey-bg: #eef0f3; --red: #c23b3b; --red-bg: #fdecec;
+    --violet: #7046c8; --violet-bg: #f1ebfd;
     --add: #1f8a4c; --add-bg: #e6f6ec; --del: #c23b3b; --del-bg: #fdecec; --hunk: #6b5bd6;
     --term-bg: #0f1115; --term-fg: #d6d9de;
     --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
@@ -21,6 +22,7 @@
       --text: #e6e8ec; --muted: #9aa1ac; --faint: #6b7280;
       --blue: #79a6ff; --blue-bg: #1b2a4a; --amber: #f2b550; --amber-bg: #3a2b10;
       --green: #5fd08f; --green-bg: #15301f; --grey-bg: #222731; --red: #ff8a8a; --red-bg: #351818;
+      --violet: #b9a2ff; --violet-bg: #2a2045;
       --add: #5fd08f; --add-bg: #13281b; --del: #ff8a8a; --del-bg: #351818; --hunk: #a99cff;
       --term-bg: #0a0c0f;
       --shadow: none;
@@ -181,6 +183,74 @@
   .diff .meta-line { color: var(--faint); }
   .placeholder { color: var(--muted); padding: 40px; text-align: center; font-family: inherit; white-space: normal; }
 
+  .chip.review { background: var(--violet-bg); color: var(--violet); font-weight: 600; }
+  .chip.k-blocking { background: var(--red-bg); color: var(--red); font-weight: 600; }
+  .chip.k-fix { background: var(--amber-bg); color: var(--amber); }
+  .chip.k-suggestion { background: var(--blue-bg); color: var(--blue); }
+  .chip.k-question { background: var(--violet-bg); color: var(--violet); }
+  .chip.k-praise { background: var(--green-bg); color: var(--green); }
+  .report-grid { flex: 1; display: grid; grid-template-columns: 240px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-height: 0; }
+  .report-grid.no-map { grid-template-columns: minmax(0, 1fr); }
+  .report-grid.no-map .minimap { display: none; }
+  .report { position: relative; overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .minimap { border-right: 1px solid var(--border); overflow: auto; padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--surface-2); }
+  .minimap > h3 { margin: 0 6px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
+  .mm-strip { display: flex; gap: 2px; height: 10px; margin: 0 6px 12px; }
+  .mm-strip button { flex: 1; border: 0; padding: 0; border-radius: 2px; background: var(--k); cursor: pointer; opacity: .85; }
+  .mm-strip button:hover, .mm-strip button.on { opacity: 1; outline: 2px solid var(--k); outline-offset: 1px; }
+  .mm-link { --k: var(--muted); --k-bg: var(--grey-bg); display: flex; gap: 8px; align-items: flex-start; width: 100%; text-align: left; border: 0; border-left: 3px solid transparent; background: none; color: var(--text); padding: 5px 8px; border-radius: 0 6px 6px 0; cursor: pointer; font: inherit; min-width: 0; }
+  .mm-link:hover { background: var(--surface); }
+  .mm-link.on { background: var(--k-bg); border-left-color: var(--k); }
+  .mm-verdict { font-size: 12.5px; font-weight: 650; color: var(--k); }
+  .mm-verdict.request_changes { --k: var(--red); --k-bg: var(--red-bg); }
+  .mm-verdict.comment { --k: var(--amber); --k-bg: var(--amber-bg); }
+  .mm-verdict.approve { --k: var(--green); --k-bg: var(--green-bg); }
+  .mm-group { margin-top: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--k); align-items: center; }
+  .mm-group .n { margin-left: auto; font-weight: 600; }
+  .mm-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--k); flex-shrink: 0; margin-top: 5px; }
+  .mm-group .mm-dot { margin-top: 0; }
+  .mm-item { flex-direction: column; gap: 1px; padding-left: 12px; border-left-color: color-mix(in srgb, var(--k) 35%, transparent); }
+  .mm-item .t { font-size: 12.5px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .mm-item .f { font: 10.5px var(--mono); color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .rb { scroll-margin-top: 12px; }
+  .report-head { display: flex; flex-direction: column; gap: 8px; }
+  .report-head .pr { font-size: 15px; font-weight: 650; }
+  .report-head .pr a { color: inherit; }
+  .report-head .sub { font-size: 12px; color: var(--muted); }
+  .verdict { border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; border: 1px solid; }
+  .verdict b { font-size: 14px; }
+  .verdict p { margin: 0; font-size: 13.5px; color: var(--text); max-width: 80ch; }
+  .verdict.request_changes { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  .verdict.comment { background: var(--amber-bg); border-color: var(--amber); color: var(--amber); }
+  .verdict.approve { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+  .rgroup { display: flex; flex-direction: column; gap: 10px; }
+  .rgroup > h3 { margin: 6px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--k); }
+  .rb { --k: var(--muted); --k-bg: var(--grey-bg); border: 1px solid var(--border); border-left: 4px solid var(--k); border-radius: 10px; background: var(--surface); overflow: hidden; }
+  .rb.blocking, .rgroup.blocking, .mm.blocking { --k: var(--red); --k-bg: var(--red-bg); }
+  .rb.fix, .rgroup.fix, .mm.fix { --k: var(--amber); --k-bg: var(--amber-bg); }
+  .rb.suggestion, .rgroup.suggestion, .mm.suggestion { --k: var(--blue); --k-bg: var(--blue-bg); }
+  .rb.question, .rgroup.question, .mm.question { --k: var(--violet); --k-bg: var(--violet-bg); }
+  .rb.praise, .rgroup.praise, .mm.praise { --k: var(--green); --k-bg: var(--green-bg); }
+  .rgroup.info, .mm.info { --k: var(--muted); --k-bg: var(--grey-bg); }
+  .rb-head { background: var(--k-bg); padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .rb-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--k); }
+  .rb-title { font-size: 14px; font-weight: 650; }
+  .rb-loc { font: 11.5px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+  .rb-body { padding: 4px 14px 12px; display: flex; flex-direction: column; }
+  .rb-sec { padding-top: 10px; display: flex; flex-direction: column; gap: 3px; }
+  .rb-sec h5, .rb-draft h5 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); }
+  .rb-sec p, .rb-draft p { margin: 0; font-size: 13.5px; line-height: 1.55; max-width: 80ch; }
+  .rb code, .verdict code { font: 12px var(--mono); background: var(--surface-2); padding: 1px 4px; border-radius: 4px; overflow-wrap: anywhere; }
+  .rb-draft { margin-top: 12px; border: 1px dashed var(--border); border-radius: 8px; padding: 10px 12px; background: var(--surface-2); display: flex; flex-direction: column; gap: 6px; }
+  .rb-draft .row { display: flex; align-items: center; gap: 8px; }
+  .rb-draft .row .btn { margin-left: auto; }
+  dialog .kinds { display: flex; gap: 8px; }
+  dialog .kinds label { flex: 1; flex-direction: row; align-items: flex-start; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; color: var(--text); font-weight: 600; font-size: 13px; }
+  dialog .kinds label:has(input:checked) { border-color: var(--blue); background: var(--blue-bg); }
+  dialog .kinds small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  dialog label[hidden] { display: none; }
+
   dialog { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); padding: 0; width: min(560px, calc(100vw - 32px)); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
   dialog::backdrop { background: rgba(10,12,16,.45); }
   dialog form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
@@ -202,6 +272,8 @@
     .actions { margin-left: 0; }
     .side-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
     .side { border-right: 0; border-bottom: 1px solid var(--border); max-height: 40vh; }
+    .report-grid { grid-template-columns: minmax(0, 1fr); }
+    .minimap { display: none; }
   }
 </style>
 </head>
@@ -224,6 +296,12 @@
 <aside id="panel">
   <div class="panel-head" id="panel-head"></div>
   <nav class="tabs" id="tabs"></nav>
+  <div class="view" id="report-view" hidden>
+    <div class="report-grid no-map" id="report-grid">
+      <nav class="minimap" id="minimap" aria-label="Sommaire du rapport"></nav>
+      <div class="report" id="report"></div>
+    </div>
+  </div>
   <div class="view" id="chat-view">
     <div class="chat-bar" id="chat-bar"></div>
     <div class="chat" id="chat"></div>
@@ -279,6 +357,13 @@
   <form id="new-form">
     <h2>Nouvelle session Claude</h2>
     <p class="text">La session tourne dans tmux : tu peux la suivre et lui écrire depuis le cockpit.</p>
+    <div class="kinds" id="new-kinds">
+      <label><input type="radio" name="kind" value="session" checked><span>Session<small>Une session Claude libre.</small></span></label>
+      <label><input type="radio" name="kind" value="review"><span>Review<small>Skills de review préchargés, rapport en blocs colorés.</small></span></label>
+    </div>
+    <label for="new-pr" id="new-pr-label" hidden>Pull request (lien ou numéro)
+      <input type="text" id="new-pr" placeholder="https://github.com/org/repo/pull/1234" autocomplete="off">
+    </label>
     <label for="new-worktree">Worktree (existant ou nouveau)
       <input type="text" id="new-worktree" list="worktree-names" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,60}" placeholder="skl-1234-ma-feature" autocomplete="off">
     </label>
@@ -327,6 +412,19 @@
     up: { label: 'App up', hint: "L'app répond. Clique pour le détail." },
     degraded: { label: 'App up · alertes', hint: "L'app répond, mais des process ont un problème. Clique pour le détail." },
     ko: { label: 'App KO', hint: "Le build ou un process a échoué. Clique pour voir les logs et relancer." },
+  };
+  const KINDS = {
+    blocking: { label: 'Bloquant · request changes', group: 'Bloquants', short: 'bloquant' },
+    fix: { label: 'À corriger', group: 'À corriger', short: 'à corriger' },
+    suggestion: { label: 'Suggestion', group: 'Suggestions', short: 'suggestion' },
+    question: { label: 'Question', group: 'Questions', short: 'question' },
+    praise: { label: 'Bien vu', group: 'Bien vu', short: 'bien vu' },
+    info: { label: 'Contexte', group: 'Contexte', short: 'contexte' },
+  };
+  const VERDICTS = {
+    request_changes: 'Request changes',
+    comment: 'Commentaires sans blocage',
+    approve: 'Approve',
   };
   const KEYMAP = { Enter: 'Enter', Escape: 'Escape', Backspace: 'BSpace', Tab: 'Tab', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Delete: 'DC', Home: 'Home', End: 'End', PageUp: 'PPage', PageDown: 'NPage' };
   const ANSI16 = ['#2a2e35', '#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#d6d9de', '#5c6370', '#ff7b86', '#b5e08f', '#f2d48f', '#8cc4ff', '#dda0f0', '#7fd6e0', '#ffffff'];
@@ -547,11 +645,33 @@
     </div>`;
   }
 
+  const prLabel = (pr) => { const n = String(pr || '').match(/(?:pull\/|^#?)(\d+)/); return n ? `PR #${n[1]}` : 'PR'; };
+  const blockKind = (b) => (KINDS[b.kind] ? b.kind : 'info');
+
+  function verdictOf(report) {
+    if (VERDICTS[report.verdict]) return report.verdict;
+    const kinds = report.blocks.map(blockKind);
+    if (kinds.includes('blocking')) return 'request_changes';
+    return kinds.some((k) => ['fix', 'suggestion', 'question'].includes(k)) ? 'comment' : 'approve';
+  }
+
+  function kindCounts(report) {
+    return Object.keys(KINDS).filter((k) => k !== 'info').map((k) => [k, report.blocks.filter((b) => blockKind(b) === k).length]).filter(([, n]) => n);
+  }
+
+  function reviewChips(wt) {
+    const r = wt.review;
+    if (!r) return [];
+    const chips = [`<span class="chip review">Review · ${esc(prLabel(r.pr))}</span>`];
+    if (!r.report) return [...chips, '<span class="chip">rapport en attente</span>'];
+    return [...chips, ...kindCounts(r.report).map(([k, n]) => `<span class="chip k-${k}">${n} ${KINDS[k].short}${n > 1 && !['à corriger', 'bien vu'].includes(KINDS[k].short) ? 's' : ''}</span>`)];
+  }
+
   function card(wt) {
     const st = sessionStatus(wt);
     const s = wt.sessions[0];
     const last = s?.actions?.[0];
-    const meta = [];
+    const meta = reviewChips(wt);
     if (wt.sessions.some((x) => x.live)) meta.push('<span class="chip live">⌨ pilotable</span>');
     if (wt.files.length) meta.push(`<span class="chip">✎ ${wt.files.length} fichier${wt.files.length > 1 ? 's' : ''}</span>`);
     if (wt.added || wt.deleted) meta.push(`<span class="chip"><span class="plus">+${wt.added}</span> <span class="minus">−${wt.deleted}</span></span>`);
@@ -581,9 +701,11 @@
 
   function renderTabs() {
     const tabs = selected === SHELL ? [['term', 'Terminal']] : [['chat', 'Conversation'], ['term', 'Terminal'], ['changes', 'Changements']];
+    if (currentWt()?.review) tabs.unshift(['report', 'Rapport']);
     if (state.app) tabs.push(['app', `App<span class="tab-dot ${esc(state.app.state)}"></span>`]);
     if (!tabs.some(([id]) => id === tab)) tab = tabs[0][0];
     $('tabs').innerHTML = tabs.map(([id, label]) => `<button data-tab="${id}" class="${id === tab ? 'on' : ''}">${label}</button>`).join('');
+    $('report-view').hidden = tab !== 'report';
     $('chat-view').hidden = tab !== 'chat';
     $('term-view').hidden = tab !== 'term';
     $('changes-view').hidden = tab !== 'changes';
@@ -608,6 +730,7 @@
     $('panel-head').innerHTML = `
       <div><div class="name">${esc(wt.name)}</div><div class="branch">${esc(wt.branch || 'HEAD détachée')} · ${esc(wt.path)}</div></div>
       ${headEnd(`<span class="badge ${st}"><span class="dot"></span>${STATUS[st].label}</span>`)}`;
+    renderReport(wt);
     renderChatBar(wt);
     renderComposer(s);
     updateMode();
@@ -619,6 +742,118 @@
     $('side').innerHTML = `
       ${s?.task ? `<div><h3>Tâche</h3><div class="task" style="-webkit-line-clamp: 8">${esc(s.task)}</div></div>` : ''}
       <div><h3>Fichiers modifiés</h3>${files}</div>`;
+  }
+
+  let reportSignature = null;
+  const drafts = [];
+
+  function minimap(rep, verdict, groups) {
+    const blocks = groups.flatMap(([, list]) => list);
+    const strip = blocks.map((b, i) => `<button class="mm ${blockKind(b)}" data-jump="r-b-${i}" title="${esc(b.title)}"></button>`).join('');
+    let i = 0;
+    const sections = groups.map(([k, list]) => `
+      <button class="mm-link mm mm-group ${k}" data-jump="r-g-${k}"><span class="mm-dot"></span>${KINDS[k].group}<span class="n">${list.length}</span></button>
+      ${list.map((b) => {
+        const file = b.file ? `${b.file.split('/').pop()}${b.line ? `:${b.line}` : ''}` : '';
+        return `<button class="mm-link mm mm-item ${k}" data-jump="r-b-${i++}" title="${esc(b.file || b.title)}"><span class="t">${esc(String(b.title).replace(/`/g, ''))}</span>${file ? `<span class="f">${esc(file)}</span>` : ''}</button>`;
+      }).join('')}`).join('');
+    return `<h3>Vue d'ensemble</h3>
+      <div class="mm-strip">${strip}</div>
+      <button class="mm-link mm-verdict ${verdict}" data-jump="r-verdict">${VERDICTS[verdict]}</button>
+      ${sections}`;
+  }
+
+  function jumpTo(id) {
+    const target = document.getElementById(id);
+    if (!target) return;
+    const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('report').scrollTo({ top: target.offsetTop - 12, behavior: smooth ? 'smooth' : 'auto' });
+  }
+
+  function trackMinimap() {
+    const box = $('report');
+    const anchors = [...box.querySelectorAll('[id^="r-"]')];
+    if (!anchors.length) return;
+    const atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 4;
+    const current = atEnd ? anchors[anchors.length - 1] : anchors.filter((a) => a.offsetTop - box.scrollTop <= 80).pop() || anchors[0];
+    const id = current.id.startsWith('r-g-') ? anchors[anchors.indexOf(current) + 1]?.id || current.id : current.id;
+    document.querySelectorAll('#minimap [data-jump]').forEach((el) => el.classList.toggle('on', el.dataset.jump === id));
+    const active = document.querySelector(`#minimap .mm-link[data-jump="${id}"]`);
+    if (active) {
+      const map = $('minimap');
+      if (active.offsetTop < map.scrollTop || active.offsetTop + active.offsetHeight > map.scrollTop + map.clientHeight) active.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function reportBlock(b, i) {
+    const k = blockKind(b);
+    const sec = (title, text) => (text ? `<div class="rb-sec"><h5>${title}</h5>${md(String(text))}</div>` : '');
+    const loc = b.file ? `<div class="rb-loc">${esc(b.file)}${b.line ? `:${esc(b.line)}` : ''}</div>` : '';
+    const draft = b.comment ? `<div class="rb-draft"><div class="row"><h5>Brouillon de commentaire</h5><button class="btn" data-draft="${drafts.push(String(b.comment)) - 1}">Copier</button></div>${md(String(b.comment))}</div>` : '';
+    return `<article class="rb ${k}" id="r-b-${i}">
+      <div class="rb-head"><span class="rb-tag">${KINDS[k].label}</span><span class="rb-title">${esc(b.title)}</span>${loc}</div>
+      <div class="rb-body">${sec('Constat', b.finding)}${sec('Impact', b.impact)}${sec('Correctif proposé', b.fix)}${draft}</div>
+    </article>`;
+  }
+
+  function renderReport(wt) {
+    const r = wt.review;
+    const signature = r ? `${wt.path}|${JSON.stringify(r)}` : null;
+    if (signature === reportSignature) return;
+    reportSignature = signature;
+    drafts.length = 0;
+    const box = $('report');
+    $('report-grid').classList.toggle('no-map', !r?.report);
+    if (!r?.report) $('minimap').innerHTML = '';
+    if (!r) { box.innerHTML = ''; return; }
+    const prLink = /^https?:\/\//.test(r.pr || '') ? r.pr : null;
+    if (!r.report) {
+      box.innerHTML = `<div class="report-head"><div class="pr">Review ${prLink ? `<a href="${esc(prLink)}" target="_blank" rel="noopener">${esc(prLabel(r.pr))} ↗</a>` : esc(prLabel(r.pr))}</div></div>
+        <div class="placeholder">La review est en cours. Le rapport s'affiche ici dès que la session l'a écrit${r.startedAt ? ` (lancée il y a ${ago(r.startedAt)})` : ''}.</div>`;
+      return;
+    }
+    const rep = r.report;
+    const url = rep.pr?.url || prLink;
+    const verdict = verdictOf(rep);
+    const title = `${prLabel(url || r.pr)}${rep.pr?.title ? ` · ${rep.pr.title}` : ''}`;
+    const sub = [rep.pr?.author && `par ${rep.pr.author}`, rep.generatedAt && `rapport du ${new Date(rep.generatedAt).toLocaleString()}`, `${rep.blocks.length} point${rep.blocks.length > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+    const groups = Object.keys(KINDS).map((k) => [k, rep.blocks.filter((b) => blockKind(b) === k)]).filter(([, list]) => list.length);
+    const scrollTop = box.scrollTop;
+    let index = 0;
+    $('minimap').innerHTML = minimap(rep, verdict, groups);
+    box.innerHTML = `
+      <div class="report-head">
+        <div class="pr">${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(title)} ↗</a>` : esc(title)}</div>
+        <div class="sub">${esc(sub)}</div>
+      </div>
+      <div class="verdict ${verdict}" id="r-verdict"><b>${VERDICTS[verdict]}</b>${rep.summary ? md(String(rep.summary)) : ''}</div>
+      <div class="legend">${kindCounts(rep).map(([k, n]) => `<span class="chip k-${k}">${n} · ${KINDS[k].group}</span>`).join('')}</div>
+      ${groups.map(([k, list]) => `<section class="rgroup ${k}" id="r-g-${k}"><h3>${KINDS[k].group}</h3>${list.map((b) => reportBlock(b, index++)).join('')}</section>`).join('')}`;
+    box.scrollTop = scrollTop;
+    trackMinimap();
+  }
+
+  $('report').addEventListener('scroll', trackMinimap, { passive: true });
+  $('minimap').addEventListener('click', (e) => {
+    const link = e.target.closest('[data-jump]');
+    if (link) jumpTo(link.dataset.jump);
+  });
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      const ok = document.execCommand('copy');
+      area.remove();
+      return ok;
+    }
   }
 
   function renderChatBar(wt) {
@@ -751,8 +986,9 @@
   }
 
   function select(target) {
-    selected = target; selectedFile = null; chatSession = null; chatSignature = null; chatBarSignature = null;
+    selected = target; selectedFile = null; chatSession = null; chatSignature = null; chatBarSignature = null; reportSignature = null;
     if (target === SHELL && tab !== 'app') tab = 'term';
+    if (currentWt()?.review?.report) tab = 'report';
     renderGrid(); renderPanel();
     if (tab === 'app') loadScreen();
     if (target !== SHELL) { loadDiff(); if (tab === 'chat') loadChat(true); }
@@ -835,6 +1071,13 @@
     }
     const appBtn = e.target.closest('[data-app]');
     if (appBtn) { appAction(appBtn.dataset.app); return; }
+    const draftBtn = e.target.closest('[data-draft]');
+    if (draftBtn) {
+      const ok = await copyText(drafts[Number(draftBtn.dataset.draft)] || '');
+      draftBtn.textContent = ok ? 'Copié' : 'Copie impossible';
+      setTimeout(() => (draftBtn.textContent = 'Copier'), 1500);
+      return;
+    }
     if (e.target.id === 'composer-send') { sendMessage(); return; }
     if (e.target.id === 'resume-btn') {
       const result = await post('/api/resume', { session: chatSession });
@@ -844,7 +1087,7 @@
     }
     const tabBtn = e.target.closest('#tabs button');
     if (tabBtn) {
-      tab = tabBtn.dataset.tab; localSet('tab', tab); renderTabs();
+      tab = tabBtn.dataset.tab; if (tab !== 'report') localSet('tab', tab); renderTabs();
       if (tab === 'chat') loadChat(true);
       if (tab === 'term') { loadScreen(); $('screen').focus(); }
       if (tab === 'app') loadScreen();
@@ -980,7 +1223,22 @@
     toast('Le cockpit ne répond pas : regarde server.log ou relance start.sh.', 'error');
   });
 
-  $('new-btn').addEventListener('click', () => { $('new-form').reset(); $('new-dialog').showModal(); $('new-worktree').focus(); });
+  const newKind = () => $('new-form').elements.kind.value;
+
+  function syncNewKind() {
+    const review = newKind() === 'review';
+    $('new-pr-label').hidden = !review;
+    $('new-pr').required = review;
+    $('new-prompt').placeholder = review ? 'Consignes en plus pour la review (optionnel)' : 'Ce que Claude doit faire';
+  }
+
+  $('new-kinds').addEventListener('change', () => { syncNewKind(); (newKind() === 'review' ? $('new-pr') : $('new-worktree')).focus(); });
+  $('new-pr').addEventListener('input', () => {
+    const n = $('new-pr').value.trim().match(/(?:pull\/|^#?)(\d+)/);
+    if (n && (!$('new-worktree').value || /^review-\d*$/.test($('new-worktree').value))) $('new-worktree').value = `review-${n[1]}`;
+  });
+
+  $('new-btn').addEventListener('click', () => { $('new-form').reset(); syncNewKind(); $('new-dialog').showModal(); $('new-worktree').focus(); });
 
   document.querySelectorAll('dialog [data-dismiss]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
 
@@ -988,7 +1246,7 @@
     e.preventDefault();
     const worktree = $('new-worktree').value.trim();
     $('new-submit').disabled = true;
-    const result = await post('/api/start', { worktree, prompt: $('new-prompt').value });
+    const result = await post('/api/start', { worktree, prompt: $('new-prompt').value, kind: newKind(), pr: $('new-pr').value });
     $('new-submit').disabled = false;
     if (!result.ok) { toast(result.data.error || 'Lancement impossible.', 'error'); return; }
     $('new-dialog').close();

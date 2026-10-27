@@ -6,6 +6,8 @@ A small web cockpit to follow and drive parallel Claude Code sessions started wi
 
 For each git worktree it shows the Claude session state (working / needs input / done), the conversation, the live terminal, the changed files and their diff. Sessions running in tmux can be driven from the browser: send messages, answer permission prompts, switch permission mode, start or resume a session, close a worktree. A persistent bash terminal is available as its own card.
 
+"New session" can start a **review** session instead of a free one: give it a pull request, and the session starts with a system prompt that lists the review skills to load (`code-review`, `security-review` and every skill whose name contains "review", or `review.skills` in the config) and asks for a report through the `review-report` skill. The report (`~/.claude/worktree-reviews/<worktree>.report.json`) is shown in a "Rapport" tab as colored blocks: blocking (red, request changes), to fix (amber), suggestion (blue), question (violet), praise (green), context (grey), each with its finding, impact, fix and a draft PR comment to copy.
+
 When an app is configured, every side panel also carries an app button and an App tab: they run the app's launch command once at the root of the main checkout (tmux session `cw-app`) and show its state — stopped, building, starting, up, degraded or KO — with the launch log, restart and stop.
 
 No npm dependency: Node, git and tmux only.
@@ -28,6 +30,7 @@ No npm dependency: Node, git and tmux only.
 | `container` | none | Docker container to run in: `start.sh` re-runs itself there with `docker exec` |
 | `hosts` | `[]` | Extra hostnames allowed in the `Host` header |
 | `claudeBin` | `~/.local/bin/claude` | Claude Code binary used for sessions started from the cockpit |
+| `review.skills` | `code-review`, `security-review` and the skills named `*review*` | Skills a review session is told to load |
 | `app.command` | none (no app button) | Launch command, run in the main checkout |
 | `app.processManager` | none | `pm2` to read process states and run `pm2 delete all` before a restart and on stop |
 | `app.pm2Bin` | `node_modules/.bin/pm2` of the repo, else `pm2` | pm2 binary |
@@ -50,6 +53,7 @@ Environment variables: `PORT` (default 8052 through `start.sh`), `HOST` or `COCK
 | `hooks/worktree-state.js` | Claude Code hook writing one JSON state file per session in `~/.claude/worktree-state/` |
 | `statusline.js` | Claude Code status line: worktree, branch, dirty files, unpushed commits |
 | `skills/run-app/SKILL.md` | Claude Code skill: start, stop and check the app from any session through the cockpit API |
+| `skills/review-report/SKILL.md` | Claude Code skill: the JSON format of a review report rendered by the cockpit |
 | `settings.snippet.json` | The `statusLine` and `hooks` entries merged by `install.js` |
 
 ## Security

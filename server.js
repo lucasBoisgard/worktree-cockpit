@@ -36,6 +36,7 @@ const REPO = process.env.REPO || CONFIG.repo || detectRepo();
 const CLAUDE_BIN = process.env.CLAUDE_BIN || CONFIG.claudeBin || path.join(os.homedir(), '.local', 'bin', 'claude');
 const STATE_DIR = path.join(os.homedir(), '.claude', 'worktree-state');
 const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
+const REVIEWS_DIR = path.join(os.homedir(), '.claude', 'worktree-reviews');
 const SHELL_SESSION = 'cw-shell';
 const APP_SESSION = 'cw-app';
 const APP = CONFIG.app?.command ? CONFIG.app : null;
@@ -105,6 +106,21 @@ function claudeLockAlive({ pid, start }) {
 }
 
 const worktreeName = (wtPath) => (wtPath === REPO ? 'main' : path.basename(wtPath));
+
+function readJson(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function readReview(name) {
+  const meta = readJson(path.join(REVIEWS_DIR, `${name}.json`));
+  const report = readJson(path.join(REVIEWS_DIR, `${name}.report.json`));
+  if (!meta && !report) return null;
+  return { pr: meta?.pr || report?.pr?.url || null, startedAt: meta?.startedAt || null, report: report && Array.isArray(report.blocks) ? report : null };
+}
 
 function parseStatus(out) {
   const files = [];
@@ -213,6 +229,7 @@ async function describe(wt) {
     behind: parsed.behind,
     upstream: parsed.upstream,
     lastCommit: subject ? { subject, at: Number(ts) * 1000 } : null,
+    review: readReview(worktreeName(wt.path)),
     sessions: [],
   };
 }
@@ -453,11 +470,44 @@ function validName(name) {
   return /^[A-Za-z0-9][A-Za-z0-9._-]{0,60}$/.test(name);
 }
 
-async function startSession({ worktree, prompt }) {
+function reviewSkills(wtPath) {
+  if (Array.isArray(CONFIG.review?.skills)) return CONFIG.review.skills;
+  const found = [path.join(wtPath, '.claude', 'skills'), path.join(os.homedir(), '.claude', 'skills')].flatMap((dir) => {
+    try {
+      return fs.readdirSync(dir).filter((name) => /review/i.test(name) && fs.existsSync(path.join(dir, name, 'SKILL.md')));
+    } catch {
+      return [];
+    }
+  });
+  return ['code-review', 'security-review', ...found];
+}
+
+function reviewSystemPrompt(skills, reportFile) {
+  return [
+    'This session is a pull request review started from the worktree cockpit.',
+    `Review skills available in this session: ${skills.join(', ')}.`,
+    'Before reading the pull request, load with the Skill tool the review skills that fit it: always code-review, plus the specialised ones whose description matches what the pull request touches. Run them, then check every finding against the code before keeping it.',
+    'Never post, comment, approve or request changes on the pull request yourself.',
+    `When the review is done, write the report with the review-report skill to ${reportFile}: the cockpit renders it as colored blocks, one per finding. Then give a short summary in the conversation.`,
+  ].join('\n');
+}
+
+async function startSession({ worktree, prompt, kind, pr }) {
   const name = String(worktree || '').trim();
   if (!validName(name)) return { error: 'Nom de worktree invalide (lettres, chiffres, . _ -).' };
+  const review = kind === 'review';
+  const prRef = String(pr || '').trim();
+  if (review && !/^(https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+(\/[\w./-]*)?|#?\d+)$/.test(prRef)) return { error: 'PR invalide : un lien GitHub de pull request ou un numéro.' };
   const existing = (await listWorktrees()).find((wt) => worktreeName(wt.path) === name);
   const args = existing ? [] : ['--worktree', name];
+  if (review) {
+    fs.mkdirSync(REVIEWS_DIR, { recursive: true });
+    fs.rmSync(path.join(REVIEWS_DIR, `${name}.report.json`), { force: true });
+    fs.writeFileSync(path.join(REVIEWS_DIR, `${name}.json`), JSON.stringify({ kind: 'review', pr: prRef, startedAt: Date.now() }));
+    const skills = [...new Set([...reviewSkills(existing ? existing.path : REPO), 'review-report'])];
+    args.push('--append-system-prompt', reviewSystemPrompt(skills, path.join(REVIEWS_DIR, `${name}.report.json`)));
+    prompt = `Review the pull request ${prRef}.${prompt && String(prompt).trim() ? `\n\n${String(prompt).trim()}` : ''}`;
+  }
   if (prompt && String(prompt).trim()) args.push(String(prompt));
   const session = `cw-${name}-${Date.now().toString(36).slice(-4)}`;
   const result = await tmux(['new-session', '-d', '-s', session, ...TMUX_SIZE, '-c', existing ? existing.path : REPO, '-e', TMUX_PATH, CLAUDE_BIN, ...args]);
@@ -497,6 +547,7 @@ async function closeWorktree({ path: wtPath, force, deleteBranch }) {
 
   const removed = await run('git', ['-C', REPO, 'worktree', 'remove', ...(force ? ['--force'] : []), wt.path]);
   if (!removed.ok) return { error: removed.stderr.trim() };
+  for (const suffix of ['.json', '.report.json']) fs.rmSync(path.join(REVIEWS_DIR, `${worktreeName(wt.path)}${suffix}`), { force: true });
   if (deleteBranch && wt.branch) {
     const branch = await run('git', ['-C', REPO, 'branch', '-d', wt.branch]);
     if (!branch.ok) return { ok: true, warning: `Worktree fermé, branche ${wt.branch} conservée : ${branch.stderr.trim()}` };
