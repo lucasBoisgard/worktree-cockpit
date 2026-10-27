@@ -700,7 +700,7 @@
       ['done', count('done'), 'terminées'],
       ['', dirty, 'avec changements'],
     ].map(([cls, n, label]) => `<span class="counter ${n ? cls : ''}">${n} ${label}</span>`).join('')
-      + limitAlerts().map((w) => `<span class="counter limit-${w.level}" title="${esc(resetText(w))}">Limite ${esc(w.label)} : ${w.left} % restants</span>`).join('');
+      + limitAlerts().map((w) => `<span class="counter limit-${w.level}" title="${esc(resetText(w))}">Limite ${esc(w.label)} : ${w.pct} % utilisés</span>`).join('');
     $('updated').textContent = `${state.worktrees.length} worktrees · mis à jour ${new Date(state.generatedAt).toLocaleTimeString()}`;
     $('worktree-names').innerHTML = state.worktrees.filter((w) => w.name !== 'main').map((w) => `<option value="${esc(w.name)}">`).join('');
   }
@@ -749,10 +749,10 @@
 
   function meters(windows) {
     return `<div class="meters">${windows.map((w) => `
-      <div class="meter" title="${w.pct} % utilisés · ${esc(resetText(w))}">
+      <div class="meter" title="${w.left} % restants · ${esc(resetText(w))}">
         <span class="label">${w.label}</span>
-        <span class="track" role="meter" aria-label="Reste sur la limite ${esc(w.label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${w.left}"><span class="fill ${w.level}" style="width:${w.left}%"></span></span>
-        <span class="pct ${w.level}">${w.left} %</span>
+        <span class="track" role="meter" aria-label="Usage de la limite ${esc(w.label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${w.pct}"><span class="fill ${w.level}" style="width:${w.pct}%"></span></span>
+        <span class="pct ${w.level}">${w.pct} %</span>
       </div>`).join('')}</div>`;
   }
 
@@ -760,9 +760,9 @@
     return `<div class="tiles">${windows.map((w) => `
       <div class="tile ${w.level}">
         <span class="tile-label">Limite ${esc(w.label)}</span>
-        <span class="tile-value"><b>${w.left} %</b> restants</span>
-        <span class="track" role="meter" aria-label="Reste sur la limite ${esc(w.label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${w.left}"><span class="fill ${w.level}" style="width:${w.left}%"></span></span>
-        <span class="tile-sub">${w.pct} % utilisés</span>
+        <span class="tile-value"><b>${w.pct} %</b> utilisés</span>
+        <span class="track" role="meter" aria-label="Usage de la limite ${esc(w.label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${w.pct}"><span class="fill ${w.level}" style="width:${w.pct}%"></span></span>
+        <span class="tile-sub">${w.left} % restants</span>
         <span class="tile-sub">${esc(resetText(w))}</span>
       </div>`).join('')}</div>`;
   }
@@ -773,13 +773,13 @@
     const windows = limitWindows(state.limits);
     const alert = worst(windows.map((w) => w.level));
     const badge = alert ? `<span class="badge ${alert}"><span class="dot"></span>${alert === 'crit' ? 'Limite presque atteinte' : 'Limite proche'}</span>` : `<span class="badge">${state.limits ? `relevé il y a ${ago(state.limits.at)}` : 'en attente'}</span>`;
-    const tightest = [...windows].sort((a, b) => a.left - b.left)[0];
+    const tightest = [...windows].sort((a, b) => b.pct - a.pct)[0];
     return `<div class="card usage-card ${alert} ${selected === USAGE ? 'selected' : ''}" data-usage="1">
       <div class="top">
-        <div><div class="name">Tokens restants</div><div class="branch">limites du compte Claude</div></div>
+        <div><div class="name">Tokens utilisés</div><div class="branch">limites du compte Claude</div></div>
         ${badge}
       </div>
-      ${tightest ? `<div class="remaining ${tightest.level}"><b>${tightest.left} %</b> restants sur la limite ${esc(tightest.label)}</div>${meters(windows)}` : '<div class="hint">Les limites s’affichent après la prochaine réponse de Claude dans une session.</div>'}
+      ${tightest ? `<div class="remaining ${tightest.level}"><b>${tightest.pct} %</b> utilisés sur la limite ${esc(tightest.label)}</div>${meters(windows)}` : '<div class="hint">Les limites s’affichent après la prochaine réponse de Claude dans une session.</div>'}
     </div>`;
   }
 
@@ -801,9 +801,9 @@
     const alerts = windows.filter((w) => w.level);
     const total = (t) => t.input + t.cacheWrite + t.cacheRead + t.output;
     const limitsHtml = windows.length
-      ? `${alerts.map((w) => `<div class="alert ${w.level}"><b>Il reste ${w.left} % sur la limite ${esc(w.label)}.</b> ${esc(resetText(w))}.${w.level === 'crit' ? ' Les sessions vont bientôt être bloquées.' : ''}</div>`).join('')}
+      ? `${alerts.map((w) => `<div class="alert ${w.level}"><b>${w.pct} % utilisés sur la limite ${esc(w.label)}.</b> ${esc(resetText(w))}.${w.level === 'crit' ? ' Les sessions vont bientôt être bloquées.' : ''}</div>`).join('')}
          ${limitTiles(windows)}
-         <p class="caption">Relevé il y a ${ago(usageData.limits.at)}, à la dernière réponse de Claude dans une session. Alerte quand il reste ${100 - LIMIT_WARN} %, alerte forte à ${100 - LIMIT_CRIT} %.</p>`
+         <p class="caption">Relevé il y a ${ago(usageData.limits.at)}, à la dernière réponse de Claude dans une session. Alerte à ${LIMIT_WARN} % utilisés, alerte forte à ${LIMIT_CRIT} %.</p>`
       : '<p class="caption">Pas encore de relevé. Claude Code transmet les limites du compte à la statusline à chaque réponse : elles s’affichent après la prochaine réponse dans une session.</p>';
 
     const sessions = usageData.sessions.map((s) => {
