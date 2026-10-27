@@ -45,6 +45,7 @@ const HISTORY_CACHE_TTL_MS = 30000;
 const DATA_DIR = path.join(os.homedir(), '.claude');
 const BASE_BRANCH = CONFIG.pr?.base || CONFIG.baseBranch || 'master';
 const TICK_MS = 3000;
+const TICK_ENABLED = process.env.COCKPIT_NO_TICK !== '1';
 const PR_REFRESH_MS = 60000;
 const EVENTS_MAX = 200;
 const HISTORY_FILES_MAX = 400;
@@ -265,6 +266,44 @@ function hasTranscript(session) {
   return !!session.transcriptPath && fs.existsSync(session.transcriptPath);
 }
 
+const repoCache = new Map();
+const REPO_CACHE_TTL_MS = 30000;
+
+function repoLabel(remote, top) {
+  const match = String(remote || '').trim().match(/[:/]([^/:]+\/[^/]+?)(?:\.git)?$/);
+  return match ? match[1] : path.basename(top);
+}
+
+async function repoOf(dir) {
+  const cached = repoCache.get(dir);
+  if (cached && Date.now() - cached.at < REPO_CACHE_TTL_MS) return cached.info;
+  const top = ((await git(dir, ['rev-parse', '--show-toplevel'])) || '').trim();
+  let info = null;
+  if (top) {
+    const [branch, remote] = await Promise.all([git(top, ['branch', '--show-current']), git(top, ['remote', 'get-url', 'origin'])]);
+    info = { path: top, name: repoLabel(remote, top), branch: (branch || '').trim() || null };
+  }
+  repoCache.set(dir, { at: Date.now(), info });
+  return info;
+}
+
+async function externalRepos(session, ownPath) {
+  const dirs = new Set();
+  for (const action of session.actions || []) {
+    if (!['Edit', 'Write', 'NotebookEdit'].includes(action.tool) || !action.detail) continue;
+    const dir = path.dirname(path.resolve(session.cwd, action.detail));
+    let existing = dir;
+    while (existing !== '/' && !fs.existsSync(existing)) existing = path.dirname(existing);
+    dirs.add(existing);
+  }
+  const repos = new Map();
+  for (const dir of dirs) {
+    const info = await repoOf(dir);
+    if (info && info.path !== ownPath) repos.set(info.path, info);
+  }
+  return [...repos.values()];
+}
+
 function ownerOf(cwd, worktrees) {
   return worktrees
     .filter((wt) => cwd === wt.path || cwd.startsWith(`${wt.path}/`))
@@ -324,6 +363,7 @@ async function snapshot() {
       usage: usage ? { context: usage.context, costUsd: usage.costUsd, at: usage.at } : null,
       checkpoints: readCheckpoints(session.sessionId),
       queue: queues[session.sessionId] || [],
+      externalRepos: await externalRepos(session, owner.path),
     });
   }
   const byName = new Map(described.map((d) => [d.name, d]));
@@ -341,7 +381,9 @@ async function snapshot() {
   const data = {
     generatedAt: Date.now(),
     repo: REPO,
+    repoName: (await repoOf(REPO))?.name || path.basename(REPO),
     baseBranch: BASE_BRANCH,
+    tick: TICK_ENABLED,
     worktrees: described,
     shell: { live: shellLive },
     app,
@@ -1446,7 +1488,10 @@ function saveAutomation({ item }) {
     enabled: item.enabled !== false,
     tzOffsetMin: Number.isFinite(Number(item.tzOffsetMin)) ? Number(item.tzOffsetMin) : 0,
     schedule: schedule.type === 'daily' ? { type: 'daily', time: schedule.time, days: (schedule.days || [1, 2, 3, 4, 5]).map(Number).filter((d) => d >= 0 && d <= 6) } : { type: 'interval', minutes: Number(schedule.minutes) },
+    createdAt: list.find((a) => a.id === id)?.createdAt || Date.now(),
     lastRun: list.find((a) => a.id === id)?.lastRun || null,
+    lastWorktree: list.find((a) => a.id === id)?.lastWorktree || null,
+    lastOk: list.find((a) => a.id === id)?.lastOk ?? null,
     lastResult: list.find((a) => a.id === id)?.lastResult || null,
   };
   saveStore('worktree-automations.json', [...list.filter((a) => a.id !== id), clean]);
@@ -1458,6 +1503,25 @@ function deleteAutomation({ id }) {
   return { ok: true };
 }
 
+function nextRunOf(a, now = Date.now()) {
+  if (!a.enabled) return null;
+  if (a.schedule.type === 'interval') return a.lastRun ? Math.max(now, a.lastRun + a.schedule.minutes * 60000) : now;
+  const [h, m] = a.schedule.time.split(':').map(Number);
+  const local = new Date(now - a.tzOffsetMin * 60000);
+  for (let d = 0; d < 8; d++) {
+    const day = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + d, h, m));
+    const slot = day.getTime() + a.tzOffsetMin * 60000;
+    if (!a.schedule.days.includes(day.getUTCDay())) continue;
+    if (slot > now || Math.max(a.lastRun || 0, a.createdAt || 0) < slot) return Math.max(slot, now);
+  }
+  return null;
+}
+
+function listAutomations() {
+  const now = Date.now();
+  return loadAutomations().map((a) => ({ ...a, nextRun: nextRunOf(a, now) }));
+}
+
 function automationDue(a, now) {
   if (!a.enabled) return false;
   if (a.schedule.type === 'interval') return !a.lastRun || now - a.lastRun >= a.schedule.minutes * 60000;
@@ -1465,7 +1529,7 @@ function automationDue(a, now) {
   const [h, m] = a.schedule.time.split(':').map(Number);
   if (!a.schedule.days.includes(local.getUTCDay())) return false;
   const slot = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), h, m) + a.tzOffsetMin * 60000;
-  return now >= slot && (!a.lastRun || a.lastRun < slot);
+  return now >= slot && Math.max(a.lastRun || 0, a.createdAt || 0) < slot;
 }
 
 async function runAutomation(id) {
@@ -1476,6 +1540,8 @@ async function runAutomation(id) {
   const worktree = a.newWorktree ? `${a.worktree}-${stamp}` : a.worktree;
   const result = await startSession({ worktree, prompt: a.prompt });
   a.lastRun = Date.now();
+  a.lastWorktree = result.error ? null : worktree;
+  a.lastOk = !result.error;
   a.lastResult = result.error ? `Échec : ${result.error}` : `Lancée dans ${worktree}`;
   saveStore('worktree-automations.json', list);
   pushEvent({ type: result.error ? 'automation_failed' : 'automation', worktree, message: `${a.name} : ${a.lastResult}` });
@@ -1676,7 +1742,7 @@ http
         const found = /^[\w-]+$/.test(sessionId) ? historyFile(sessionId) : null;
         return found ? json(res, 200, readChatFile(found.file, sessionId)) : send(res, 404, 'text/plain', 'session not found');
       }
-      if (url.pathname === '/api/automations') return json(res, 200, loadAutomations());
+      if (url.pathname === '/api/automations') return json(res, 200, listAutomations());
       if (url.pathname === '/api/state') return json(res, 200, { ...(await snapshot()), startedAt: STARTED_AT });
       if (url.pathname === '/api/app') return json(res, 200, await appState());
       if (url.pathname === '/api/usage') return json(res, 200, usageHistory(Number(url.searchParams.get('tz'))));
@@ -1704,7 +1770,7 @@ http
   })
   .listen(PORT, HOST, () => {
     console.log(`Worktree dashboard on http://${HOST}:${PORT} (repo ${REPO})`);
-    if (process.env.COCKPIT_NO_TICK !== '1') {
+    if (TICK_ENABLED) {
       tick();
       setInterval(tick, TICK_MS);
     }

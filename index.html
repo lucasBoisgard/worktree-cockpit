@@ -338,6 +338,23 @@
   .toast.error { background: var(--red); color: #fff; }
   .toast[hidden] { display: none; }
 
+  .kanban { display: grid; grid-template-columns: repeat(4, minmax(300px, 1fr)); gap: 14px; overflow-x: auto; align-items: start; padding-bottom: 4px; }
+  .column { --c: var(--faint); background: var(--surface-2); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 10px; min-width: 0; border-top: 3px solid var(--c); }
+  .column.needs { --c: var(--amber); } .column.working { --c: var(--blue); } .column.review { --c: var(--green); }
+  .column > h2 { margin: 2px 4px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--c); display: flex; gap: 8px; align-items: baseline; }
+  .column > h2 .count { margin-left: auto; font-weight: 600; color: var(--muted); }
+  .column > p { margin: 0 4px; font-size: 12px; color: var(--muted); }
+  .column .empty-col { font-size: 12px; color: var(--faint); text-align: center; padding: 18px 0; border: 1px dashed var(--border); border-radius: 10px; }
+  h1 .repo { font: 600 12.5px var(--mono); color: var(--violet); background: var(--violet-bg); padding: 2px 8px; border-radius: 6px; margin-left: 8px; vertical-align: 2px; }
+  .repo-chip { font: 600 12px var(--mono); color: var(--violet); background: var(--violet-bg); padding: 2px 8px; border-radius: 6px; }
+  .ext-chip { font: 12px var(--mono); color: var(--amber); background: var(--amber-bg); padding: 2px 8px; border-radius: 6px; word-break: break-all; }
+  .msg a, .tool a, .screen a { color: var(--blue); text-decoration: underline; overflow-wrap: anywhere; }
+  .auto-state { font: 600 11px var(--mono); padding: 1px 6px; border-radius: 4px; }
+  .auto-state.never { background: var(--grey-bg); color: var(--muted); }
+  .auto-state.ran { background: var(--green-bg); color: var(--green); }
+  .auto-state.failed { background: var(--red-bg); color: var(--red); }
+  .auto-state.paused { background: var(--grey-bg); color: var(--faint); }
+  .notice { border-radius: 10px; padding: 10px 14px; font-size: 13px; background: var(--amber-bg); color: var(--amber); }
   .card.needs_input { box-shadow: 0 0 0 2px var(--amber), var(--shadow); }
   .card.focused { outline: 2px dashed var(--blue); outline-offset: 2px; }
   .card .pin { border: 0; background: none; color: var(--faint); cursor: pointer; font-size: 15px; padding: 0 2px; line-height: 1; }
@@ -477,7 +494,7 @@
 </head>
 <body>
 <header>
-  <h1>Worktrees</h1>
+  <h1 id="repo-title">Worktrees</h1>
   <div class="counters" id="counters"></div>
   <div class="actions">
     <div class="filters" id="filters">
@@ -486,7 +503,7 @@
     </div>
     <div class="seg" id="order-seg" title="Ordre des cartes">
       <button data-order="fixed">Ordre fixe</button>
-      <button data-order="state">Par état</button>
+      <button data-order="state">Tableau par état</button>
     </div>
     <button class="btn bell" id="bell-btn" title="Notifications">🔔<span class="n" id="bell-n" hidden></span></button>
     <details class="menu" id="tools-menu">
@@ -996,7 +1013,7 @@
       let bg = st.bg;
       if (st.inverse) [fg, bg] = [bg || 'var(--term-bg)', fg || 'var(--term-fg)'];
       const css = [fg && `color:${fg}`, bg && `background:${bg}`, st.bold && 'font-weight:700', st.dim && 'opacity:.6', st.italic && 'font-style:italic', st.underline && 'text-decoration:underline'].filter(Boolean).join(';');
-      out += css ? `<span style="${css}">${esc(chunk)}</span>` : esc(chunk);
+      out += css ? `<span style="${css}">${escLink(chunk)}</span>` : escLink(chunk);
     };
     while ((m = re.exec(clean))) {
       flush(clean.slice(last, m.index));
@@ -1031,10 +1048,20 @@
     return out;
   }
 
+  function linkify(html) {
+    return html.replace(/https?:\/\/[^\s<>"'`*]+/g, (raw) => {
+      const cut = raw.search(/&(quot|#39|lt|gt);/);
+      const url = (cut >= 0 ? raw.slice(0, cut) : raw).replace(/[.,;:!?)\]]+$/, '');
+      return `<a href="${url}" target="_blank" rel="noopener">${url}</a>${raw.slice(url.length)}`;
+    });
+  }
+
+  const escLink = (s) => linkify(esc(s));
+
   function md(text) {
-    const inline = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    const inline = (s) => escLink(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
     return text.split(/```[^\n]*\n?/).map((part, i) => {
-      if (i % 2) return `<pre><code>${esc(part.replace(/\n$/, ''))}</code></pre>`;
+      if (i % 2) return `<pre><code>${escLink(part.replace(/\n$/, ''))}</code></pre>`;
       return part.split(/\n{2,}/).map((block) => {
         const lines = block.split('\n').filter((l) => l.trim());
         if (!lines.length) return '';
@@ -1144,6 +1171,7 @@
   }
 
   function renderCounters() {
+    $('repo-title').innerHTML = `Worktrees<span class="repo" title="${esc(state.repo)}">${esc(state.repoName)}</span>`;
     const count = (st) => state.worktrees.filter((w) => sessionStatus(w) === st).length;
     const dirty = state.worktrees.filter((w) => w.files.length).length;
     $('counters').innerHTML = [
@@ -1348,6 +1376,12 @@
     return `<a class="chip pr ${cls}" href="${esc(pr.url)}" target="_blank" rel="noopener" title="${esc(title)}">${esc(label)}</a>`;
   }
 
+  function extChips(wt) {
+    const repos = new Map();
+    for (const s of wt.sessions.slice(0, 3)) for (const r of s.externalRepos || []) repos.set(r.path, r);
+    return [...repos.values()].map((r) => `<span class="ext-chip" title="La session modifie aussi des fichiers de ${esc(r.path)}">aussi : ${esc(r.name)}${r.branch ? ` ⎇ ${esc(r.branch)}` : ''}</span>`).join('');
+  }
+
   function quickBlock(wt, s, st) {
     if (!s) return '';
     const parts = [];
@@ -1384,7 +1418,6 @@
     const last = s?.actions?.[0];
     const meta = reviewChips(wt);
     const ctx = s?.usage?.context?.usedPercentage;
-    if (wt.pr) meta.push(prChip(wt.pr));
     if (state.app?.serving?.name === wt.name) meta.push('<span class="chip served" title="L\'app tourne sur le dernier commit de ce worktree">▶ app servie</span>');
     const queued = wt.sessions.reduce((n, x) => n + (x.queue?.length || 0), 0);
     if (queued) meta.push(`<span class="chip queued">⏳ ${queued} en file</span>`);
@@ -1402,7 +1435,7 @@
     return `<div class="card ${st} ${selected === wt.path ? 'selected' : ''}" data-path="${esc(wt.path)}">
       <div class="top">
         ${selecting ? `<input type="checkbox" class="pick" data-pick="${esc(wt.path)}" ${picked.has(wt.path) ? 'checked' : ''} aria-label="Sélectionner ${esc(wt.name)}">` : ''}
-        <div><div class="name">${esc(wt.name)}</div><div class="branch-row">${branchChip(wt)}</div></div>
+        <div><div class="name">${esc(wt.name)}</div><div class="branch-row">${branchChip(wt)}${prChip(wt.pr)}${extChips(wt)}</div></div>
         <span class="badge ${st}"><span class="dot"></span>${STATUS[st].label}${s ? ` · ${ago(s.updatedAt)}` : ''}</span>
         <button class="pin ${pinned ? 'on' : ''}" data-pin="${esc(wt.path)}" title="${pinned ? 'Désépingler' : 'Épingler'}">${pinned ? '★' : '☆'}</button>
       </div>
@@ -1434,22 +1467,20 @@
     const section = (title, count, body) => `<section class="grid-section"><h2>${title}${count === null ? '' : `<span class="count">${count}</span>`}</h2><div class="cards">${body}</div></section>`;
     const parts = [section('Outils', null, shellCard() + usageCard())];
     if (order === 'state') {
-      const byActivity = (a, b) => lastActivity(b) - lastActivity(a);
-      const groups = [
-        ['Épinglées', (w) => pins.has(w.path)],
-        ['Attendent ta réponse', (w) => sessionStatus(w) === 'needs_input'],
-        ['Prêtes à relire', (w) => sessionStatus(w) === 'done' && (w.files.length || w.ahead || w.pr?.state === 'OPEN')],
-        ['En cours', (w) => sessionStatus(w) === 'working'],
-        ['Autres', () => true],
+      const byPinThenActivity = (a, b) => pins.has(b.path) - pins.has(a.path) || lastActivity(b) - lastActivity(a);
+      const columns = [
+        ['needs', 'À toi de jouer', 'Claude attend une réponse ou une permission.', (w) => sessionStatus(w) === 'needs_input'],
+        ['working', 'En cours', 'Claude travaille.', (w) => sessionStatus(w) === 'working'],
+        ['review', 'À relire', 'Tour terminé avec des changements, des commits ou une PR ouverte.', (w) => sessionStatus(w) === 'done' && (w.files.length || w.ahead || w.pr?.state === 'OPEN')],
+        ['rest', 'Au repos', 'Rien en attente.', () => true],
       ];
       const left = [...standard];
-      for (const [title, test] of groups) {
-        const items = left.filter(test).sort(byActivity);
-        if (!items.length) continue;
+      const html = columns.map(([cls, title, hint, test]) => {
+        const items = left.filter(test).sort(byPinThenActivity);
         items.forEach((w) => left.splice(left.indexOf(w), 1));
-        parts.push(section(title, items.length, items.map(card).join('')));
-      }
-      if (!standard.length) parts.push(section('Worktrees', 0, empty));
+        return `<div class="column ${cls}"><h2>${title}<span class="count">${items.length}</span></h2><p>${hint}</p>${items.length ? items.map(card).join('') : '<div class="empty-col">Rien ici</div>'}</div>`;
+      }).join('');
+      parts.push(`<section class="grid-section"><h2>Worktrees<span class="count">${standard.length}</span></h2><div class="kanban">${html}</div></section>`);
     } else {
       const ordered = [...standard.filter((w) => pins.has(w.path)), ...standard.filter((w) => !pins.has(w.path))];
       parts.push(section('Worktrees', standard.length, ordered.length ? ordered.map(card).join('') : empty));
@@ -1513,7 +1544,7 @@
     const st = sessionStatus(wt);
     const s = currentSession();
     $('panel-head').innerHTML = `
-      <div><div class="name">${esc(wt.name)}</div><div class="branch-row">${branchChip(wt)}<span class="branch">${esc(wt.path)}</span></div></div>
+      <div><div class="name">${esc(wt.name)}</div><div class="branch-row"><span class="repo-chip" title="Repo">${esc(state.repoName)}</span>${branchChip(wt)}${prChip(wt.pr)}<span class="branch">${esc(wt.path)}</span></div>${extChips(wt) ? `<div class="branch-row">${extChips(wt)}</div>` : ''}</div>
       ${headEnd(`<span class="badge ${st}"><span class="dot"></span>${STATUS[st].label}</span>`)}`;
     renderReport(wt);
     renderChatBar(wt);
@@ -1668,10 +1699,10 @@
 
   function renderChatBar(wt) {
     const chip = branchChip(wt);
-    const signature = `${wt.path}|${wt.sessions.map((s) => `${s.sessionId}:${s.live}`).join(',')}|${chatSession}|${chip}`;
+    const signature = `${wt.path}|${wt.sessions.map((s) => `${s.sessionId}:${s.live}`).join(',')}|${chatSession}|${chip}|${prChip(wt.pr)}|${extChips(wt)}`;
     if (signature === chatBarSignature) return;
     chatBarSignature = signature;
-    const onBranch = `<span class="on-branch">Sur ${chip}</span>`;
+    const onBranch = `<span class="on-branch">Sur <span class="repo-chip">${esc(state.repoName)}</span>${chip}${prChip(wt.pr)}${extChips(wt)}</span>`;
     if (!wt.sessions.length) { $('chat-bar').innerHTML = `${onBranch} · Aucune session suivie pour ce worktree.`; return; }
     const options = wt.sessions.map((s) => `<option value="${esc(s.sessionId)}" ${s.sessionId === chatSession ? 'selected' : ''}>${s.live ? '⌨ ' : ''}${esc((s.task || 'Session sans prompt').slice(0, 70))} · ${ago(s.updatedAt)}</option>`).join('');
     $('chat-bar').innerHTML = `${onBranch}<label for="session-select">Session</label><select id="session-select">${options}</select>`;
@@ -1756,10 +1787,10 @@
       const mark = awaiting && i === lastIndex ? 'awaiting' : '';
       if (item.kind === 'user') {
         const cp = checkpointAt(item.at);
-        return `<div class="msg user ${mark}">${esc(item.text)}<span class="when">${time(item.at)}</span></div>${cp ? `<button class="since-link" data-since="${esc(cp.sha)}">Changements depuis ce message</button>` : ''}`;
+        return `<div class="msg user ${mark}">${escLink(item.text)}<span class="when">${time(item.at)}</span></div>${cp ? `<button class="since-link" data-since="${esc(cp.sha)}">Changements depuis ce message</button>` : ''}`;
       }
       if (item.kind === 'assistant') return `<div class="msg assistant ${mark}">${md(item.text)}<span class="when">${time(item.at)}<button class="delegate" data-delegate="${i}" title="Lancer une session liée pour cette sous-tâche">Déléguer</button></span></div>`;
-      return `<details class="tool ${item.error ? 'error' : ''} ${mark}" data-index="${i}" ${opened.has(String(i)) ? 'open' : ''}><summary><b>${esc(item.tool)}</b><span>${esc(item.detail)}</span></summary>${item.result ? `<pre>${esc(item.result)}</pre>` : ''}</details>`;
+      return `<details class="tool ${item.error ? 'error' : ''} ${mark}" data-index="${i}" ${opened.has(String(i)) ? 'open' : ''}><summary><b>${esc(item.tool)}</b><span>${escLink(item.detail)}</span></summary>${item.result ? `<pre>${escLink(item.result)}</pre>` : ''}</details>`;
     }).join('') + (awaiting ? `<div class="awaiting-note">${esc(awaiting)}${session.live ? ' · <button data-goto="term">Répondre dans le terminal</button>' : ''}</div>` : '');
     if (nearBottom || force) box.scrollTop = box.scrollHeight;
   }
@@ -2342,9 +2373,9 @@
 
   function renderChatItems(items) {
     return items.map((item) => {
-      if (item.kind === 'user') return `<div class="msg user">${esc(item.text)}</div>`;
+      if (item.kind === 'user') return `<div class="msg user">${escLink(item.text)}</div>`;
       if (item.kind === 'assistant') return `<div class="msg assistant">${md(item.text)}</div>`;
-      return `<details class="tool"><summary><b>${esc(item.tool)}</b><span>${esc(item.detail)}</span></summary>${item.result ? `<pre>${esc(item.result)}</pre>` : ''}</details>`;
+      return `<details class="tool"><summary><b>${esc(item.tool)}</b><span>${escLink(item.detail)}</span></summary>${item.result ? `<pre>${escLink(item.result)}</pre>` : ''}</details>`;
     }).join('');
   }
 
@@ -2427,12 +2458,26 @@
     if (!$('auto-dialog').open) $('auto-dialog').showModal();
     const res = await api('/api/automations').catch(() => null);
     const list = res?.ok ? await res.json() : [];
-    $('auto-list').innerHTML = list.length ? list.map((a) => `<div class="row">
-        <div class="top-line"><span class="grow">${esc(a.name)}</span><span class="ev-type ${a.enabled ? 'done' : ''}">${a.enabled ? 'active' : 'en pause'}</span></div>
-        <div class="meta-line">${esc(describeSchedule(a))} · worktree ${esc(a.worktree)}${a.newWorktree ? '-<date>' : ''}${a.lastRun ? ` · dernier lancement il y a ${ago(a.lastRun)} : ${esc(a.lastResult || '')}` : ' · jamais lancée'}</div>
+    const when = (t) => new Date(t).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const runState = (a) => {
+      if (!a.enabled) return ['paused', 'En pause'];
+      if (!a.lastRun) return ['never', 'Jamais lancée'];
+      return a.lastOk === false ? ['failed', 'Dernier lancement en échec'] : ['ran', 'Lancée'];
+    };
+    const sessionLine = (a) => {
+      const wt = a.lastWorktree && state.worktrees.find((w) => w.name === a.lastWorktree);
+      if (!a.lastWorktree) return '';
+      if (!wt) return ` · session : worktree ${esc(a.lastWorktree)} fermé`;
+      return ` · session : <b>${esc(STATUS[sessionStatus(wt)].label)}</b> dans ${esc(wt.name)}`;
+    };
+    const notice = state.tick ? '' : '<div class="notice">Ce serveur tourne sans boucle de fond (COCKPIT_NO_TICK=1) : les automatisations ne se lancent pas toutes seules ici. « Lancer maintenant » fonctionne.</div>';
+    $('auto-list').innerHTML = notice + (list.length ? list.map((a) => `<div class="row">
+        <div class="top-line"><span class="grow">${esc(a.name)}</span><span class="auto-state ${runState(a)[0]}">${runState(a)[1]}</span></div>
+        <div class="meta-line">${esc(describeSchedule(a))} · worktree ${esc(a.worktree)}${a.newWorktree ? '-<date>' : ''}</div>
+        <div class="meta-line">${a.nextRun ? `Prochain lancement : <b>${a.nextRun - Date.now() < 60000 ? (state.tick ? 'maintenant' : 'maintenant, mais la boucle de fond est désactivée ici') : esc(when(a.nextRun))}</b>` : 'Pas de prochain lancement'}${a.lastRun ? ` · dernier : ${esc(when(a.lastRun))} (${esc(a.lastResult || '')})` : ''}${sessionLine(a)}</div>
         <div class="meta-line">${esc(a.prompt.slice(0, 200))}</div>
         <div class="actions-line"><button class="btn" data-arun="${esc(a.id)}">Lancer maintenant</button><button class="btn" data-aedit="${esc(a.id)}">Modifier</button><button class="btn" data-atoggle="${esc(a.id)}">${a.enabled ? 'Mettre en pause' : 'Activer'}</button><button class="btn" data-adel="${esc(a.id)}">Supprimer</button></div>
-      </div>`).join('') : '<p class="text">Aucune automatisation. Une automatisation lance une session Claude avec un prompt, à heure fixe ou à intervalle régulier, même quand la page est fermée.</p>';
+      </div>`).join('') : '<p class="text">Aucune automatisation. Une automatisation lance une session Claude avec un prompt, à heure fixe ou à intervalle régulier, même quand la page est fermée.</p>');
     $('auto-list').dataset.items = JSON.stringify(list);
   }
 
