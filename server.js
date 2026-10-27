@@ -36,6 +36,7 @@ const REPO = process.env.REPO || CONFIG.repo || detectRepo();
 const CLAUDE_BIN = process.env.CLAUDE_BIN || CONFIG.claudeBin || path.join(os.homedir(), '.local', 'bin', 'claude');
 const STATE_DIR = path.join(os.homedir(), '.claude', 'worktree-state');
 const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
+const CLAUDE_SESSIONS_DIR = path.join(os.homedir(), '.claude', 'sessions');
 const REVIEWS_DIR = path.join(os.homedir(), '.claude', 'worktree-reviews');
 const SHELL_SESSION = 'cw-shell';
 const APP_SESSION = 'cw-app';
@@ -189,15 +190,44 @@ async function livePanes() {
     const [id, session, dead, created] = line.split('\t');
     if (id && dead !== '1') panes.set(id, { session, created: Number(created) * 1000 });
   }
+  panes.bySession = claudePanes(panes);
   return panes;
 }
 
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function claudePanes(panes) {
+  const bySession = new Map();
+  let files = [];
+  try {
+    files = fs.readdirSync(CLAUDE_SESSIONS_DIR).filter((f) => f.endsWith('.json'));
+  } catch {}
+  for (const file of files) {
+    try {
+      const entry = JSON.parse(fs.readFileSync(path.join(CLAUDE_SESSIONS_DIR, file), 'utf8'));
+      const pane = /(%\d+)$/.exec(entry.tmux || '')?.[1];
+      if (entry.sessionId && pane && panes.has(pane) && processAlive(entry.pid)) bySession.set(entry.sessionId, pane);
+    } catch {}
+  }
+  return bySession;
+}
+
 function paneOf(session, panes) {
-  if (!session?.tmuxPane || session.status === 'ended') return null;
-  const pane = panes.get(session.tmuxPane);
-  if (!pane) return null;
-  if (session.tmuxPaneSince && pane.created > session.tmuxPaneSince + 5000) return null;
-  return session.tmuxPane;
+  if (!session) return null;
+  const pane = session.tmuxPane && session.status !== 'ended' ? panes.get(session.tmuxPane) : null;
+  if (pane && !(session.tmuxPaneSince && pane.created > session.tmuxPaneSince + 5000)) return session.tmuxPane;
+  return panes.bySession?.get(session.sessionId) || null;
+}
+
+function hasTranscript(session) {
+  return !!session.transcriptPath && fs.existsSync(session.transcriptPath);
 }
 
 function ownerOf(cwd, worktrees) {
@@ -243,7 +273,9 @@ async function snapshot() {
   for (const session of readSessions()) {
     const owner = ownerOf(session.cwd, worktrees);
     if (!owner) continue;
-    byPath.get(owner.path).sessions.push({ ...session, actions: session.actions || [], live: !!paneOf(session, panes) });
+    const live = !!paneOf(session, panes);
+    if (!live && !hasTranscript(session)) continue;
+    byPath.get(owner.path).sessions.push({ ...session, actions: session.actions || [], live });
   }
   for (const d of described) d.sessions.sort((a, b) => b.updatedAt - a.updatedAt);
   const shellLive = [...panes.values()].some((p) => p.session === SHELL_SESSION);
@@ -518,6 +550,7 @@ async function resumeSession({ session: sessionId }) {
   const session = readSession(String(sessionId || ''));
   if (!session || !fs.existsSync(session.cwd)) return { error: 'Session inconnue.' };
   if (paneOf(session, await livePanes())) return { error: 'La session tourne déjà dans tmux.' };
+  if (!hasTranscript(session)) return { error: 'Cette session n’a aucun message : rien à reprendre.' };
   const name = `cw-${path.basename(session.cwd)}-${Date.now().toString(36).slice(-4)}`;
   const result = await tmux(['new-session', '-d', '-s', name, ...TMUX_SIZE, '-c', session.cwd, '-e', TMUX_PATH, CLAUDE_BIN, '--resume', session.sessionId]);
   return result.ok ? { session: name } : { error: result.stderr.trim() };
