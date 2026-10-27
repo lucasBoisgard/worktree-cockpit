@@ -15,7 +15,7 @@ No npm dependency: Node, git and tmux only.
 1. Clone into `~/.claude/worktree-dashboard`.
 2. Copy `cockpit.config.example.json` to `cockpit.config.json` and fill it in (optional, see below).
 3. Run `~/.claude/worktree-dashboard/start.sh`. Through `install.js` it merges the missing `settings.snippet.json` entries into `~/.claude/settings.json` (backup `settings.json.bak-cockpit-<timestamp>`, existing hooks and an existing `statusLine` are kept), links `skills/*` into `~/.claude/skills/` and generates the access token. It is idempotent and runs on every start; later starts are automatic through the `SessionStart` hook.
-4. Restart your Claude sessions so they load the hooks.
+4. Claude Code loads hooks when a session starts, so sessions already open do not report to the cockpit: quit each one (`/exit`) and reopen it with `claude --resume`. New sessions need nothing.
 5. Open the URL printed by `start.sh` (`http://<host>:8052/?token=…`).
 
 ## Configuration

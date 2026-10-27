@@ -83,12 +83,24 @@ async function listWorktrees() {
         if (key === 'worktree') wt.path = value;
         if (key === 'branch') wt.branch = value.replace('refs/heads/', '');
         if (key === 'detached') wt.detached = true;
-        if (key === 'locked') wt.locked = true;
+        if (key === 'locked') {
+          const claude = value.match(/^claude session .* \(pid (\d+) start (\d+)\)$/);
+          if (claude) wt.claudeLock = { pid: Number(claude[1]), start: claude[2] };
+          else wt.locked = true;
+        }
         if (key === 'prunable') wt.prunable = true;
       }
       return wt;
     })
     .filter((wt) => wt.path && !wt.prunable && fs.existsSync(wt.path));
+}
+
+function claudeLockAlive({ pid, start }) {
+  try {
+    return fs.readFileSync(`/proc/${pid}/stat`, 'utf8').split(') ')[1].split(' ')[19] === start;
+  } catch {
+    return false;
+  }
 }
 
 const worktreeName = (wtPath) => (wtPath === REPO ? 'main' : path.basename(wtPath));
@@ -474,6 +486,12 @@ async function closeWorktree({ path: wtPath, force, deleteBranch }) {
     const pane = paneOf(session, panes);
     if (pane) await tmux(['kill-pane', '-t', pane]);
     fs.writeFileSync(path.join(STATE_DIR, `${session.sessionId}.json`), JSON.stringify({ ...session, status: 'ended', tmuxPane: null, updatedAt: Date.now() }));
+  }
+
+  if (wt.claudeLock) {
+    for (let i = 0; i < 20 && claudeLockAlive(wt.claudeLock); i++) await new Promise((r) => setTimeout(r, 150));
+    if (claudeLockAlive(wt.claudeLock)) return { error: `Une session Claude ouverte hors cockpit tient ce worktree (pid ${wt.claudeLock.pid}) : quitte-la (/exit) puis réessaie.` };
+    await run('git', ['-C', REPO, 'worktree', 'unlock', wt.path]);
   }
 
   const removed = await run('git', ['-C', REPO, 'worktree', 'remove', ...(force ? ['--force'] : []), wt.path]);
