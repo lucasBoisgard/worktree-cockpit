@@ -46,7 +46,11 @@
   .btn.danger { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
   .btn:disabled { opacity: .5; cursor: default; }
   .updated { font-size: 12px; color: var(--faint); }
-  main { padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+  main { padding: 20px; display: flex; flex-direction: column; gap: 26px; }
+  .grid-section { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .grid-section h2 { margin: 0; font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; gap: 8px; align-items: baseline; }
+  .grid-section h2 .count { font-weight: 500; color: var(--faint); letter-spacing: 0; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); cursor: pointer; display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--border); transition: transform .08s; min-width: 0; }
   .card:hover { transform: translateY(-1px); }
   .card.needs_input { border-left-color: var(--amber); }
@@ -335,7 +339,7 @@
   .toast[hidden] { display: none; }
 
   @media (max-width: 760px) {
-    header { padding: 12px 16px; } main { padding: 16px; grid-template-columns: 1fr; }
+    header { padding: 12px 16px; } main { padding: 16px; } .cards { grid-template-columns: 1fr; }
     .actions { margin-left: 0; }
     .side-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
     .side { border-right: 0; border-bottom: 1px solid var(--border); max-height: 40vh; }
@@ -936,7 +940,14 @@
 
   function renderGrid() {
     const list = sorted(filter === 'active' ? state.worktrees.filter(isActive) : state.worktrees);
-    $('grid').innerHTML = shellCard() + usageCard() + (list.length ? list.map(card).join('') : '<div class="empty">Aucun worktree actif</div>');
+    const standard = list.filter((w) => !w.review);
+    const reviews = list.filter((w) => w.review);
+    const section = (title, count, body) => `<section class="grid-section"><h2>${title}${count === null ? '' : `<span class="count">${count}</span>`}</h2><div class="cards">${body}</div></section>`;
+    $('grid').innerHTML = [
+      section('Outils', null, shellCard() + usageCard()),
+      section('Worktrees', standard.length, standard.length ? standard.map(card).join('') : '<div class="empty">Aucun worktree actif</div>'),
+      reviews.length ? section('Reviews', reviews.length, reviews.map(card).join('')) : '',
+    ].join('');
     document.querySelectorAll('#filters button').forEach((b) => b.classList.toggle('on', b.dataset.filter === filter));
   }
 
