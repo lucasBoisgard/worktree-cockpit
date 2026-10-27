@@ -38,6 +38,10 @@ const STATE_DIR = path.join(os.homedir(), '.claude', 'worktree-state');
 const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
 const CLAUDE_SESSIONS_DIR = path.join(os.homedir(), '.claude', 'sessions');
 const REVIEWS_DIR = path.join(os.homedir(), '.claude', 'worktree-reviews');
+const USAGE_DIR = path.join(os.homedir(), '.claude', 'worktree-usage');
+const USAGE_DAYS = 7;
+const USAGE_SESSIONS_MAX = 30;
+const HISTORY_CACHE_TTL_MS = 30000;
 const SHELL_SESSION = 'cw-shell';
 const APP_SESSION = 'cw-app';
 const APP = CONFIG.app?.command ? CONFIG.app : null;
@@ -270,16 +274,19 @@ async function snapshot() {
   const [worktrees, panes, app] = await Promise.all([listWorktrees(), livePanes(), appState()]);
   const described = await Promise.all(worktrees.map(describe));
   const byPath = new Map(described.map((d) => [d.path, d]));
+  const snapshots = readUsageSnapshots();
+  const usageBySession = new Map(snapshots.map((u) => [u.sessionId, u]));
   for (const session of readSessions()) {
     const owner = fs.existsSync(session.cwd) && ownerOf(session.cwd, worktrees);
     if (!owner) continue;
     const live = !!paneOf(session, panes);
     if (!live && !hasTranscript(session)) continue;
-    byPath.get(owner.path).sessions.push({ ...session, actions: session.actions || [], live });
+    const usage = usageBySession.get(session.sessionId);
+    byPath.get(owner.path).sessions.push({ ...session, actions: session.actions || [], live, usage: usage ? { context: usage.context, costUsd: usage.costUsd, at: usage.at } : null });
   }
   for (const d of described) d.sessions.sort((a, b) => b.updatedAt - a.updatedAt);
   const shellLive = [...panes.values()].some((p) => p.session === SHELL_SESSION);
-  const data = { generatedAt: Date.now(), repo: REPO, worktrees: described, shell: { live: shellLive }, app };
+  const data = { generatedAt: Date.now(), repo: REPO, worktrees: described, shell: { live: shellLive }, app, limits: latestLimits(snapshots) };
   cache = { at: Date.now(), data };
   return data;
 }
@@ -302,6 +309,127 @@ function transcriptFor(session) {
   if (!session) return null;
   const candidates = [session.transcriptPath, path.join(PROJECTS_DIR, session.cwd.replace(/[^a-zA-Z0-9]/g, '-'), `${session.sessionId}.jsonl`)];
   return candidates.find((p) => p && path.resolve(p).startsWith(`${PROJECTS_DIR}/`) && fs.existsSync(p)) || null;
+}
+
+function readUsageSnapshots() {
+  let files = [];
+  try {
+    files = fs.readdirSync(USAGE_DIR).filter((f) => f.endsWith('.json'));
+  } catch {}
+  const since = Date.now() - USAGE_DAYS * 86400000;
+  return files.map((f) => readJson(path.join(USAGE_DIR, f))).filter((u) => u?.sessionId && u.at >= since);
+}
+
+function latestLimits(snapshots) {
+  const latest = snapshots.filter((u) => u.rateLimits).sort((a, b) => b.at - a.at)[0];
+  return latest ? { ...latest.rateLimits, at: latest.at } : null;
+}
+
+function usageWorktree(cwd) {
+  const match = String(cwd || '').match(/\.claude\/worktrees\/([^/]+)/);
+  if (match) return match[1];
+  if (cwd === REPO || String(cwd || '').startsWith(`${REPO}/`)) return 'main';
+  return cwd ? path.basename(cwd) : '?';
+}
+
+const emptyTotals = () => ({ input: 0, cacheWrite: 0, cacheRead: 0, output: 0 });
+
+function addTotals(into, from) {
+  for (const key of Object.keys(into)) into[key] += from[key];
+}
+
+function jsonlFiles(dir, since, depth = 0) {
+  let entries = [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {}
+  return entries.flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return depth < 3 ? jsonlFiles(full, since, depth + 1) : [];
+    if (!entry.name.endsWith('.jsonl')) return [];
+    const stat = fs.statSync(full, { throwIfNoEntry: false });
+    return stat && stat.mtimeMs >= since ? [{ file: full, size: stat.size }] : [];
+  });
+}
+
+const transcriptUsage = new Map();
+
+function scanTranscript(file, size, tzOffsetMs) {
+  let entry = transcriptUsage.get(file);
+  if (!entry || size < entry.offset || entry.tzOffsetMs !== tzOffsetMs) entry = { offset: 0, tzOffsetMs, cwd: null, seen: new Set(), days: new Map() };
+  if (size > entry.offset) {
+    const buffer = Buffer.alloc(size - entry.offset);
+    const fd = fs.openSync(file, 'r');
+    try {
+      fs.readSync(fd, buffer, 0, buffer.length, entry.offset);
+    } finally {
+      fs.closeSync(fd);
+    }
+    const end = buffer.lastIndexOf(10);
+    if (end >= 0) {
+      entry.offset += end + 1;
+      for (const line of buffer.subarray(0, end).toString('utf8').split('\n')) {
+        if (entry.cwd && !line.includes('"usage"')) continue;
+        let row;
+        try {
+          row = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        entry.cwd = entry.cwd || row.cwd || null;
+        const usage = row.message?.usage;
+        if (row.type !== 'assistant' || !usage || !row.timestamp) continue;
+        const id = row.message.id || row.requestId;
+        if (id && entry.seen.has(id)) continue;
+        if (id) entry.seen.add(id);
+        const day = new Date(Date.parse(row.timestamp) - tzOffsetMs).toISOString().slice(0, 10);
+        if (!entry.days.has(day)) entry.days.set(day, emptyTotals());
+        addTotals(entry.days.get(day), {
+          input: usage.input_tokens || 0,
+          cacheWrite: usage.cache_creation_input_tokens || 0,
+          cacheRead: usage.cache_read_input_tokens || 0,
+          output: usage.output_tokens || 0,
+        });
+      }
+    }
+  }
+  transcriptUsage.set(file, entry);
+  return entry;
+}
+
+let historyCache = null;
+function usageHistory(tzOffsetMin) {
+  const tzOffsetMs = (Number.isFinite(tzOffsetMin) ? Math.max(-840, Math.min(840, tzOffsetMin)) : 0) * 60000;
+  if (historyCache && historyCache.tzOffsetMs === tzOffsetMs && Date.now() - historyCache.at < HISTORY_CACHE_TTL_MS) return historyCache.data;
+  const dayKeys = Array.from({ length: USAGE_DAYS }, (_, i) => new Date(Date.now() - tzOffsetMs - (USAGE_DAYS - 1 - i) * 86400000).toISOString().slice(0, 10));
+  const today = dayKeys[dayKeys.length - 1];
+  const days = new Map(dayKeys.map((d) => [d, emptyTotals()]));
+  const worktrees = new Map();
+  for (const { file, size } of jsonlFiles(PROJECTS_DIR, Date.now() - (USAGE_DAYS + 1) * 86400000)) {
+    const entry = scanTranscript(file, size, tzOffsetMs);
+    const name = usageWorktree(entry.cwd);
+    for (const [day, totals] of entry.days) {
+      if (!days.has(day)) continue;
+      addTotals(days.get(day), totals);
+      if (!worktrees.has(name)) worktrees.set(name, { name, week: emptyTotals(), today: emptyTotals() });
+      addTotals(worktrees.get(name).week, totals);
+      if (day === today) addTotals(worktrees.get(name).today, totals);
+    }
+  }
+  const total = (t) => t.input + t.cacheWrite + t.cacheRead + t.output;
+  const snapshots = readUsageSnapshots();
+  const data = {
+    generatedAt: Date.now(),
+    limits: latestLimits(snapshots),
+    days: [...days].map(([date, totals]) => ({ date, ...totals })),
+    worktrees: [...worktrees.values()].sort((a, b) => total(b.week) - total(a.week)),
+    sessions: snapshots
+      .sort((a, b) => b.at - a.at)
+      .slice(0, USAGE_SESSIONS_MAX)
+      .map((u) => ({ sessionId: u.sessionId, worktree: usageWorktree(u.cwd), model: u.model, context: u.context, costUsd: u.costUsd, at: u.at })),
+  };
+  historyCache = { at: Date.now(), tzOffsetMs, data };
+  return data;
 }
 
 function textOf(content) {
@@ -831,6 +959,7 @@ http
       if (['/api/restart', '/api/start', '/api/resume', '/api/close', '/api/app/start', '/api/app/stop', '/api/send', '/api/paste', '/api/keys'].includes(url.pathname)) return await handleWrite(req, res, url.pathname);
       if (url.pathname === '/api/state') return json(res, 200, { ...(await snapshot()), startedAt: STARTED_AT });
       if (url.pathname === '/api/app') return json(res, 200, await appState());
+      if (url.pathname === '/api/usage') return json(res, 200, usageHistory(Number(url.searchParams.get('tz'))));
       if (url.pathname === '/api/chat') {
         const chat = readChat(url.searchParams.get('session') || '');
         return chat === null ? send(res, 404, 'text/plain', 'transcript not found') : json(res, 200, chat);

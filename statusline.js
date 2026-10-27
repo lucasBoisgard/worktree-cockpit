@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
 const CACHE_TTL_MS = 5000;
+const USAGE_DIR = path.join(os.homedir(), '.claude', 'worktree-usage');
 
 function git(cwd, args) {
   try {
@@ -40,6 +42,32 @@ function gitSummary(cwd) {
   return summary;
 }
 
+function recordUsage(input, cwd) {
+  if (!/^[\w-]+$/.test(input.session_id || '')) return;
+  const context = input.context_window || {};
+  const usage = {
+    sessionId: input.session_id,
+    cwd,
+    at: Date.now(),
+    model: input.model?.display_name || null,
+    context: {
+      usedPercentage: context.used_percentage ?? null,
+      size: context.context_window_size ?? null,
+      inputTokens: context.total_input_tokens ?? null,
+      outputTokens: context.total_output_tokens ?? null,
+    },
+    costUsd: input.cost?.total_cost_usd ?? null,
+    rateLimits: input.rate_limits || null,
+  };
+  try {
+    fs.mkdirSync(USAGE_DIR, { recursive: true });
+    const file = path.join(USAGE_DIR, `${input.session_id}.json`);
+    const tmp = `${file}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(usage));
+    fs.renameSync(tmp, file);
+  } catch {}
+}
+
 let raw = '';
 process.stdin.on('data', (chunk) => (raw += chunk));
 process.stdin.on('end', () => {
@@ -48,6 +76,7 @@ process.stdin.on('end', () => {
     input = JSON.parse(raw);
   } catch {}
   const cwd = input.workspace?.current_dir || input.cwd || process.cwd();
+  recordUsage(input, cwd);
   const model = input.model?.display_name;
   const line = [`🌳 ${worktreeName(cwd)}`, gitSummary(cwd), model].filter(Boolean).join(' · ');
   process.stdout.write(line);

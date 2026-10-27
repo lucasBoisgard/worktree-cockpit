@@ -81,6 +81,68 @@
   .card-close:hover { color: var(--red); background: var(--red-bg); }
   .commit { font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 60px 0; }
+  .counter.limit-warn { background: var(--amber-bg); color: var(--amber); }
+  .counter.limit-crit { background: var(--red-bg); color: var(--red); }
+  .card.usage-card { border-left-color: var(--blue); }
+  .card.usage-card.warn { border-left-color: var(--amber); }
+  .card.usage-card.crit { border-left-color: var(--red); }
+  .badge.warn { background: var(--amber-bg); color: var(--amber); }
+  .badge.crit { background: var(--red-bg); color: var(--red); }
+  .meters { display: flex; flex-direction: column; gap: 8px; }
+  .meter { display: grid; grid-template-columns: 64px minmax(0, 1fr) 46px; gap: 10px; align-items: center; font-size: 12px; }
+  .meter .label { color: var(--muted); font-weight: 600; }
+  .meter .track, .meter .fill { display: block; }
+  .meter .track { height: 8px; border-radius: 4px; background: var(--grey-bg); overflow: hidden; }
+  .meter .fill { height: 100%; border-radius: 4px; background: var(--green); }
+  .meter .fill.warn { background: var(--amber); }
+  .meter .fill.crit { background: var(--red); }
+  .meter .pct { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .meter .pct.warn { color: var(--amber); }
+  .meter .pct.crit { color: var(--red); }
+  .remaining { font-size: 13px; color: var(--muted); }
+  .remaining b { font-size: 26px; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; margin-right: 4px; }
+  .remaining.warn b { color: var(--amber); }
+  .remaining.crit b { color: var(--red); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .tile { border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .tile.warn { border-color: var(--amber); }
+  .tile.crit { border-color: var(--red); }
+  .tile-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .tile-value { font-size: 13px; color: var(--muted); }
+  .tile-value b { font-size: 32px; line-height: 1.1; color: var(--text); font-variant-numeric: tabular-nums; margin-right: 4px; }
+  .tile.warn .tile-value b { color: var(--amber); }
+  .tile.crit .tile-value b { color: var(--red); }
+  .tile .track { display: block; height: 8px; border-radius: 4px; background: var(--grey-bg); overflow: hidden; }
+  .tile .fill { display: block; height: 100%; border-radius: 4px; background: var(--green); }
+  .tile .fill.warn { background: var(--amber); }
+  .tile .fill.crit { background: var(--red); }
+  .tile-sub { font-size: 11.5px; color: var(--faint); }
+  .chip.ctx-warn { background: var(--amber-bg); color: var(--amber); font-weight: 600; }
+  .chip.ctx-crit { background: var(--red-bg); color: var(--red); font-weight: 600; }
+  .usage { flex: 1; overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 26px; }
+  .usage section { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .usage h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin: 0; }
+  .usage .caption { font-size: 12px; color: var(--muted); margin: 0; max-width: 80ch; }
+  .usage .alert { border-radius: 10px; padding: 10px 14px; font-size: 13px; border: 1px solid; }
+  .usage .alert.warn { background: var(--amber-bg); border-color: var(--amber); color: var(--amber); }
+  .usage .alert.crit { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  .table-wrap { overflow-x: auto; }
+  .usage table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .usage th { text-align: left; font-size: 11px; font-weight: 600; color: var(--faint); padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .usage td { padding: 7px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .usage .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .usage td.name { font-weight: 600; }
+  .usage .mini { display: inline-block; width: 60px; height: 6px; border-radius: 3px; background: var(--grey-bg); overflow: hidden; vertical-align: middle; margin-right: 8px; }
+  .usage .mini span { display: block; height: 100%; background: var(--blue); }
+  .usage .mini span.warn { background: var(--amber); }
+  .usage .mini span.crit { background: var(--red); }
+  .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; height: 170px; }
+  .day { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; height: 100%; min-width: 0; cursor: default; }
+  .day .val { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 15px; }
+  .day .bar { width: 100%; max-width: 44px; background: var(--blue); border-radius: 4px 4px 0 0; min-height: 2px; opacity: .85; }
+  .day:hover .bar, .day.today .bar { opacity: 1; }
+  .day .lbl { font-size: 11px; color: var(--faint); border-top: 1px solid var(--border); width: 100%; text-align: center; padding-top: 4px; }
+  .day.today .lbl { color: var(--text); font-weight: 650; }
 
   aside { position: fixed; top: 0; right: 0; bottom: 0; width: min(960px, 100vw); background: var(--surface); border-left: 1px solid var(--border); box-shadow: -8px 0 24px rgba(0,0,0,.12); transform: translateX(100%); transition: transform .18s; display: flex; flex-direction: column; z-index: 10; }
   aside.open { transform: none; }
@@ -345,6 +407,9 @@
       <span class="hint">Logs du build lancé à la racine du repo (session tmux cw-app).</span>
     </div>
   </div>
+  <div class="view" id="usage-view" hidden>
+    <div class="usage" id="usage"></div>
+  </div>
   <div class="view" id="changes-view" hidden>
     <div class="side-grid">
       <div class="side" id="side"></div>
@@ -404,7 +469,11 @@
   };
   const STALE_MS = 30 * 60 * 1000;
   const SHELL = 'shell';
+  const USAGE = 'usage';
   const APP = 'app';
+  const LIMIT_WARN = 80;
+  const LIMIT_CRIT = 95;
+  const LIMITS = [['five_hour', '5 h'], ['seven_day', '7 jours'], ['spend_limit', 'Dépenses']];
   const APP_STATUS = {
     stopped: { label: "Lancer l'app", hint: "L'app ne tourne pas. Clique pour lancer le build à la racine du repo." },
     building: { label: 'Build en cours', hint: 'Build en cours dans tmux (cw-app). Clique pour suivre les logs.' },
@@ -438,6 +507,7 @@
   let chatSignature = null;
   let chatBarSignature = null;
   let pendingSelect = null;
+  let usageData = null;
   let closing = null;
   let pendingOps = [];
   let flushTimer = null;
@@ -629,7 +699,8 @@
       ['working', count('working'), 'en cours'],
       ['done', count('done'), 'terminées'],
       ['', dirty, 'avec changements'],
-    ].map(([cls, n, label]) => `<span class="counter ${n ? cls : ''}">${n} ${label}</span>`).join('');
+    ].map(([cls, n, label]) => `<span class="counter ${n ? cls : ''}">${n} ${label}</span>`).join('')
+      + limitAlerts().map((w) => `<span class="counter limit-${w.level}" title="${esc(resetText(w))}">Limite ${esc(w.label)} : ${w.left} % restants</span>`).join('');
     $('updated').textContent = `${state.worktrees.length} worktrees · mis à jour ${new Date(state.generatedAt).toLocaleTimeString()}`;
     $('worktree-names').innerHTML = state.worktrees.filter((w) => w.name !== 'main').map((w) => `<option value="${esc(w.name)}">`).join('');
   }
@@ -643,6 +714,144 @@
       </div>
       <div class="hint">Session tmux persistante, indépendante des worktrees. Elle survit à la fermeture de la page.</div>
     </div>`;
+  }
+
+  const level = (pct) => (pct >= LIMIT_CRIT ? 'crit' : pct >= LIMIT_WARN ? 'warn' : '');
+  const worst = (levels) => (levels.includes('crit') ? 'crit' : levels.includes('warn') ? 'warn' : '');
+
+  function fmtTokens(n) {
+    if (n >= 1e6) return `${(n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: n >= 1e8 ? 0 : 1 })} M`;
+    if (n >= 1e3) return `${Math.round(n / 1e3).toLocaleString('fr-FR')} k`;
+    return String(n);
+  }
+
+  const fmtUsd = (n) => (n == null ? '—' : `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`);
+
+  function limitWindows(limits) {
+    if (!limits) return [];
+    return LIMITS.filter(([key]) => limits[key]).map(([key, label]) => {
+      const w = limits[key];
+      const resetsAt = Number.isFinite(w.resets_at) ? w.resets_at * 1000 : null;
+      const expired = !!resetsAt && resetsAt < Date.now();
+      const pct = expired ? 0 : Math.round(w.used_percentage ?? 0);
+      return { key, label, pct, left: Math.max(0, 100 - pct), resetsAt, expired, level: level(pct) };
+    });
+  }
+
+  function resetText(w) {
+    if (w.expired) return 'Fenêtre réinitialisée depuis le dernier relevé';
+    if (!w.resetsAt) return '';
+    const mins = Math.max(0, Math.round((w.resetsAt - Date.now()) / 60000));
+    const left = mins >= 1440 ? `${Math.floor(mins / 1440)} j ${Math.floor((mins % 1440) / 60)} h` : mins >= 60 ? `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')}` : `${mins} min`;
+    const at = new Date(w.resetsAt).toLocaleString('fr-FR', mins >= 1440 ? { weekday: 'short', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
+    return `Réinitialisée dans ${left} (${at})`;
+  }
+
+  function meters(windows) {
+    return `<div class="meters">${windows.map((w) => `
+      <div class="meter" title="${w.pct} % utilisés · ${esc(resetText(w))}">
+        <span class="label">${w.label}</span>
+        <span class="track" role="meter" aria-label="Reste sur la limite ${esc(w.label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${w.left}"><span class="fill ${w.level}" style="width:${w.left}%"></span></span>
+        <span class="pct ${w.level}">${w.left} %</span>
+      </div>`).join('')}</div>`;
+  }
+
+  function limitTiles(windows) {
+    return `<div class="tiles">${windows.map((w) => `
+      <div class="tile ${w.level}">
+        <span class="tile-label">Limite ${esc(w.label)}</span>
+        <span class="tile-value"><b>${w.left} %</b> restants</span>
+        <span class="track" role="meter" aria-label="Reste sur la limite ${esc(w.label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${w.left}"><span class="fill ${w.level}" style="width:${w.left}%"></span></span>
+        <span class="tile-sub">${w.pct} % utilisés</span>
+        <span class="tile-sub">${esc(resetText(w))}</span>
+      </div>`).join('')}</div>`;
+  }
+
+  const limitAlerts = () => limitWindows(state?.limits).filter((w) => w.level);
+
+  function usageCard() {
+    const windows = limitWindows(state.limits);
+    const alert = worst(windows.map((w) => w.level));
+    const badge = alert ? `<span class="badge ${alert}"><span class="dot"></span>${alert === 'crit' ? 'Limite presque atteinte' : 'Limite proche'}</span>` : `<span class="badge">${state.limits ? `relevé il y a ${ago(state.limits.at)}` : 'en attente'}</span>`;
+    const tightest = [...windows].sort((a, b) => a.left - b.left)[0];
+    return `<div class="card usage-card ${alert} ${selected === USAGE ? 'selected' : ''}" data-usage="1">
+      <div class="top">
+        <div><div class="name">Tokens restants</div><div class="branch">limites du compte Claude</div></div>
+        ${badge}
+      </div>
+      ${tightest ? `<div class="remaining ${tightest.level}"><b>${tightest.left} %</b> restants sur la limite ${esc(tightest.label)}</div>${meters(windows)}` : '<div class="hint">Les limites s’affichent après la prochaine réponse de Claude dans une session.</div>'}
+    </div>`;
+  }
+
+  async function loadUsage() {
+    try {
+      const res = await api(`/api/usage?tz=${new Date().getTimezoneOffset()}`);
+      if (!res.ok) return;
+      usageData = await res.json();
+    } catch {
+      return;
+    }
+    renderUsage();
+  }
+
+  function renderUsage() {
+    if (selected !== USAGE) return;
+    if (!usageData) { $('usage').innerHTML = '<div class="placeholder">Calcul de l’usage…</div>'; return; }
+    const windows = limitWindows(usageData.limits);
+    const alerts = windows.filter((w) => w.level);
+    const total = (t) => t.input + t.cacheWrite + t.cacheRead + t.output;
+    const limitsHtml = windows.length
+      ? `${alerts.map((w) => `<div class="alert ${w.level}"><b>Il reste ${w.left} % sur la limite ${esc(w.label)}.</b> ${esc(resetText(w))}.${w.level === 'crit' ? ' Les sessions vont bientôt être bloquées.' : ''}</div>`).join('')}
+         ${limitTiles(windows)}
+         <p class="caption">Relevé il y a ${ago(usageData.limits.at)}, à la dernière réponse de Claude dans une session. Alerte quand il reste ${100 - LIMIT_WARN} %, alerte forte à ${100 - LIMIT_CRIT} %.</p>`
+      : '<p class="caption">Pas encore de relevé. Claude Code transmet les limites du compte à la statusline à chaque réponse : elles s’affichent après la prochaine réponse dans une session.</p>';
+
+    const sessions = usageData.sessions.map((s) => {
+      const pct = Math.round(s.context?.usedPercentage ?? 0);
+      const left = Math.max(0, 100 - pct);
+      return `<tr>
+        <td class="name">${esc(s.worktree)}</td>
+        <td>${esc(s.model || '—')}</td>
+        <td class="num"><span class="mini"><span class="${level(pct)}" style="width:${left}%"></span></span>${s.context?.usedPercentage == null ? '—' : `${left} %`}</td>
+        <td class="num">${s.context?.size ? fmtTokens(s.context.size) : '—'}</td>
+        <td class="num">${fmtUsd(s.costUsd)}</td>
+        <td class="num">${ago(s.at)}</td>
+      </tr>`;
+    }).join('');
+
+    const max = Math.max(1, ...usageData.days.map(total));
+    const today = usageData.days[usageData.days.length - 1]?.date;
+    const days = usageData.days.map((d) => {
+      const t = total(d);
+      const label = new Date(`${d.date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+      const tip = `${label} · ${fmtTokens(t)} tokens\nEntrée ${fmtTokens(d.input)} · Cache écrit ${fmtTokens(d.cacheWrite)} · Cache lu ${fmtTokens(d.cacheRead)} · Sortie ${fmtTokens(d.output)}`;
+      return `<div class="day ${d.date === today ? 'today' : ''}" title="${esc(tip)}">
+        <span class="val">${t ? fmtTokens(t) : ''}</span>
+        <span class="bar" style="height:${Math.max(1, Math.round((t / max) * 120))}px"></span>
+        <span class="lbl">${esc(label)}</span>
+      </div>`;
+    }).join('');
+
+    const wtMax = Math.max(1, ...usageData.worktrees.map((w) => total(w.week)));
+    const worktrees = usageData.worktrees.map((w) => `<tr>
+        <td class="name">${esc(w.name)}</td>
+        <td class="num">${fmtTokens(total(w.today))}</td>
+        <td class="num"><span class="mini"><span style="width:${Math.round((total(w.week) / wtMax) * 100)}%"></span></span>${fmtTokens(total(w.week))}</td>
+        <td class="num">${fmtTokens(w.week.output)}</td>
+      </tr>`).join('');
+
+    $('usage').innerHTML = `
+      <section><h3>Limites du compte</h3>${limitsHtml}</section>
+      <section><h3>Sessions</h3>
+        ${sessions ? `<div class="table-wrap"><table><thead><tr><th>Worktree</th><th>Modèle</th><th class="num">Contexte restant</th><th class="num">Fenêtre</th><th class="num">Coût estimé</th><th class="num">Relevé</th></tr></thead><tbody>${sessions}</tbody></table></div>` : '<p class="caption">Aucun relevé de session pour l’instant.</p>'}
+      </section>
+      <section><h3>Tokens traités par jour</h3>
+        <div class="days">${days}</div>
+        <p class="caption">Entrée, cache écrit, cache lu et sortie, toutes sessions confondues, sous-agents compris. Le cache lu représente l’essentiel du volume mais coûte beaucoup moins qu’une entrée normale. Survole une barre pour le détail.</p>
+      </section>
+      <section><h3>Par worktree, 7 derniers jours</h3>
+        ${worktrees ? `<div class="table-wrap"><table><thead><tr><th>Worktree</th><th class="num">Aujourd’hui</th><th class="num">7 jours</th><th class="num">Sortie (7 j)</th></tr></thead><tbody>${worktrees}</tbody></table></div>` : '<p class="caption">Aucune activité sur la période.</p>'}
+      </section>`;
   }
 
   const prLabel = (pr) => { const n = String(pr || '').match(/(?:pull\/|^#?)(\d+)/); return n ? `PR #${n[1]}` : 'PR'; };
@@ -672,6 +881,8 @@
     const s = wt.sessions[0];
     const last = s?.actions?.[0];
     const meta = reviewChips(wt);
+    const ctx = s?.usage?.context?.usedPercentage;
+    if (ctx != null && level(ctx)) meta.push(`<span class="chip ctx-${level(ctx)}" title="Fenêtre de contexte de la session">Contexte : ${Math.max(0, 100 - Math.round(ctx))} % restants</span>`);
     if (wt.sessions.some((x) => x.live)) meta.push('<span class="chip live">⌨ pilotable</span>');
     if (wt.files.length) meta.push(`<span class="chip">✎ ${wt.files.length} fichier${wt.files.length > 1 ? 's' : ''}</span>`);
     if (wt.added || wt.deleted) meta.push(`<span class="chip"><span class="plus">+${wt.added}</span> <span class="minus">−${wt.deleted}</span></span>`);
@@ -695,12 +906,12 @@
 
   function renderGrid() {
     const list = sorted(filter === 'active' ? state.worktrees.filter(isActive) : state.worktrees);
-    $('grid').innerHTML = shellCard() + (list.length ? list.map(card).join('') : '<div class="empty">Aucun worktree actif</div>');
+    $('grid').innerHTML = shellCard() + usageCard() + (list.length ? list.map(card).join('') : '<div class="empty">Aucun worktree actif</div>');
     document.querySelectorAll('#filters button').forEach((b) => b.classList.toggle('on', b.dataset.filter === filter));
   }
 
   function renderTabs() {
-    const tabs = selected === SHELL ? [['term', 'Terminal']] : [['chat', 'Conversation'], ['term', 'Terminal'], ['changes', 'Changements']];
+    const tabs = selected === SHELL ? [['term', 'Terminal']] : selected === USAGE ? [['usage', 'Tokens']] : [['chat', 'Conversation'], ['term', 'Terminal'], ['changes', 'Changements']];
     if (currentWt()?.review) tabs.unshift(['report', 'Rapport']);
     if (state.app) tabs.push(['app', `App<span class="tab-dot ${esc(state.app.state)}"></span>`]);
     if (!tabs.some(([id]) => id === tab)) tab = tabs[0][0];
@@ -709,19 +920,25 @@
     $('chat-view').hidden = tab !== 'chat';
     $('term-view').hidden = tab !== 'term';
     $('changes-view').hidden = tab !== 'changes';
+    $('usage-view').hidden = tab !== 'usage';
     $('app-view').hidden = tab !== 'app';
   }
 
   function renderPanel() {
     const panel = $('panel');
     const wt = currentWt();
-    const open = selected === SHELL || !!wt;
+    const open = selected === SHELL || selected === USAGE || !!wt;
     panel.classList.toggle('open', open);
     if (!open) return;
     renderTabs();
     $('app-pane').innerHTML = appPane();
     if (selected === SHELL) {
       $('panel-head').innerHTML = `<div><div class="name">Terminal</div><div class="branch">bash · ${esc(state.repo)} · session tmux cw-shell</div></div>${headEnd()}`;
+      return;
+    }
+    if (selected === USAGE) {
+      $('panel-head').innerHTML = `<div><div class="name">Tokens</div><div class="branch">limites du compte, sessions et usage des 7 derniers jours</div></div>${headEnd()}`;
+      renderUsage();
       return;
     }
     if (!chatSession || !wt.sessions.some((x) => x.sessionId === chatSession)) chatSession = wt.sessions[0]?.sessionId || null;
@@ -980,18 +1197,21 @@
       const wt = state.worktrees.find((w) => w.name === pendingSelect && w.sessions.some((s) => s.live));
       if (wt) { select(wt.path); pendingSelect = null; }
     }
-    if (selected && selected !== SHELL && !currentWt()) selected = null;
+    if (selected && selected !== SHELL && selected !== USAGE && !currentWt()) selected = null;
     renderCounters(); renderGrid(); renderPanel();
+    if (selected === USAGE) loadUsage();
     if (currentWt() && tab === 'chat') loadChat(false);
   }
 
   function select(target) {
     selected = target; selectedFile = null; chatSession = null; chatSignature = null; chatBarSignature = null; reportSignature = null;
     if (target === SHELL && tab !== 'app') tab = 'term';
+    if (target === USAGE) tab = 'usage';
     if (currentWt()?.review?.report) tab = 'report';
     renderGrid(); renderPanel();
     if (tab === 'app') loadScreen();
-    if (target !== SHELL) { loadDiff(); if (tab === 'chat') loadChat(true); }
+    if (target === USAGE) loadUsage();
+    else if (target !== SHELL) { loadDiff(); if (tab === 'chat') loadChat(true); }
     if (tab === 'term') { loadScreen(); $('screen').focus(); }
   }
 
@@ -1052,7 +1272,7 @@
     if (closeBtn) { e.stopPropagation(); openClose(closeBtn.dataset.close); return; }
     const c = e.target.closest('.card');
     if (!c) return;
-    select(c.dataset.shell ? SHELL : c.dataset.path);
+    select(c.dataset.shell ? SHELL : c.dataset.usage ? USAGE : c.dataset.path);
   });
 
   $('panel').addEventListener('change', (e) => {

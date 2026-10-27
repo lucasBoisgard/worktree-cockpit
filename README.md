@@ -10,6 +10,8 @@ For each git worktree it shows the Claude session state (working / needs input /
 
 When an app is configured, every side panel also carries an app button and an App tab: they run the app's launch command once at the root of the main checkout (tmux session `cw-app`) and show its state — stopped, building, starting, up, degraded or KO — with the launch log, restart and stop.
 
+A "Tokens restants" card shows what is left of the account's usage limits (5-hour and 7-day windows, spend limit when there is one) with their reset time. It turns amber when 20 % or less is left and red at 5 %, and the header then shows the limit as an alert. Worktree cards show a "Contexte" chip when 20 % or less of their session's context window is left. The card opens a Tokens tab with the remaining and used share of each limit, each session's remaining context and estimated cost, the tokens processed per day over 7 days and the usage per worktree. Limits, context and cost come from what Claude Code sends to the status line: `statusline.js` writes one snapshot per session in `~/.claude/worktree-usage/`, so the limits shown are those of the last Claude answer. The daily history is read from the transcripts in `~/.claude/projects/` (subagents included).
+
 No npm dependency: Node, git and tmux only.
 
 ## Install
@@ -51,7 +53,7 @@ Environment variables: `PORT` (default 8052 through `start.sh`), `HOST` or `COCK
 | `ensure.sh` | `SessionStart` hook: starts the server when it is not running |
 | `cockpit.config.example.json` | Configuration template |
 | `hooks/worktree-state.js` | Claude Code hook writing one JSON state file per session in `~/.claude/worktree-state/` |
-| `statusline.js` | Claude Code status line: worktree, branch, dirty files, unpushed commits |
+| `statusline.js` | Claude Code status line: worktree, branch, dirty files, unpushed commits; also writes the session's usage snapshot to `~/.claude/worktree-usage/` |
 | `skills/run-app/SKILL.md` | Claude Code skill: start, stop and check the app from any session through the cockpit API |
 | `skills/review-report/SKILL.md` | Claude Code skill: the JSON format of a review report rendered by the cockpit |
 | `settings.snippet.json` | The `statusLine` and `hooks` entries merged by `install.js` |
@@ -74,5 +76,5 @@ Environment variables: `PORT` (default 8052 through `start.sh`), `HOST` or `COCK
 
 1. Remove the cockpit entries from `~/.claude/settings.json` (the `statusLine` and the hooks pointing to this directory), or restore the `settings.json.bak-cockpit-*` backup written by the install.
 2. Remove the skill links: `rm ~/.claude/skills/run-app ~/.claude/skills/review-report`.
-3. Stop the server (`kill "$(cat ~/.claude/worktree-dashboard/server.pid)"`) and delete `~/.claude/worktree-dashboard`. `~/.claude/worktree-state/` and `~/.claude/worktree-reviews/` can be deleted too.
+3. Stop the server (`kill "$(cat ~/.claude/worktree-dashboard/server.pid)"`) and delete `~/.claude/worktree-dashboard`. `~/.claude/worktree-state/`, `~/.claude/worktree-reviews/` and `~/.claude/worktree-usage/` can be deleted too.
 - Claude Code auto mode refuses edits to `~/.claude/settings.json` and to the tmux driving code: switch to the default permission mode first.
