@@ -3,7 +3,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { execFile, execFileSync } = require('node:child_process');
+const { execFile, execFileSync, spawn } = require('node:child_process');
 const crypto = require('node:crypto');
 
 function expandEnv(value) {
@@ -29,6 +29,7 @@ function detectRepo() {
 }
 
 const CONFIG = loadConfig();
+const STARTED_AT = Date.now();
 const PORT = Number(process.env.PORT || 4747);
 const HOST = process.env.HOST || '127.0.0.1';
 const REPO = process.env.REPO || CONFIG.repo || detectRepo();
@@ -503,6 +504,132 @@ async function closeWorktree({ path: wtPath, force, deleteBranch }) {
   return { ok: true };
 }
 
+const BUILTIN_COMMANDS = [
+  ['add-dir', 'Ajouter un dossier de travail'],
+  ['agents', 'Gérer les sous-agents', true],
+  ['clear', "Vider l'historique de la conversation"],
+  ['compact', 'Résumer la conversation pour libérer du contexte', false, '[instructions]'],
+  ['config', 'Ouvrir les réglages', true],
+  ['context', "Afficher l'usage du contexte"],
+  ['cost', 'Afficher le coût et la durée de la session'],
+  ['doctor', "Diagnostiquer l'installation"],
+  ['exit', 'Quitter Claude Code'],
+  ['help', "Afficher l'aide"],
+  ['hooks', 'Gérer les hooks', true],
+  ['init', 'Initialiser un CLAUDE.md'],
+  ['mcp', 'Gérer les serveurs MCP', true],
+  ['memory', 'Éditer les fichiers mémoire', true],
+  ['model', 'Changer de modèle', true, '[modèle]'],
+  ['permissions', 'Gérer les permissions', true],
+  ['plugin', 'Gérer les plugins', true],
+  ['resume', 'Reprendre une conversation', true],
+  ['review', 'Relire une pull request'],
+  ['rewind', 'Revenir à un point précédent', true],
+  ['status', 'Afficher le statut', true],
+  ['usage', "Afficher l'usage du forfait", true],
+].map(([name, description, interactive = false, hint = '']) => ({ name, description, hint, interactive, source: 'builtin' }));
+
+function frontmatter(file) {
+  let text;
+  try {
+    text = fs.readFileSync(file, 'utf8');
+  } catch {
+    return null;
+  }
+  const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  const meta = {};
+  if (!match) return meta;
+  let key = null;
+  for (const line of match[1].split(/\r?\n/)) {
+    const pair = line.match(/^([\w-]+):\s*(.*)$/);
+    if (pair) {
+      key = pair[1];
+      meta[key] = /^[>|][-+]?$/.test(pair[2]) ? '' : pair[2].replace(/^(["'])(.*)\1$/, '$2');
+    } else if (key && /^\s+\S/.test(line)) {
+      meta[key] = `${meta[key]} ${line.trim()}`.trim();
+    }
+  }
+  return meta;
+}
+
+function subdirs(dir) {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true }).filter((e) => !e.name.startsWith('.') && (e.isDirectory() || e.isSymbolicLink())).map((e) => e.name);
+  } catch {
+    return [];
+  }
+}
+
+function skillsIn(dir, source, prefix = '') {
+  return subdirs(dir).flatMap((name) => {
+    const meta = frontmatter(path.join(dir, name, 'SKILL.md'));
+    if (!meta || meta['user-invocable'] === 'false') return [];
+    return [{ name: prefix + (meta.name || name), description: meta.description || '', hint: meta['argument-hint'] || '', source }];
+  });
+}
+
+function commandsIn(dir, source, prefix = '') {
+  const found = [];
+  const walk = (current, parts) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (e.name.startsWith('.')) continue;
+      const full = path.join(current, e.name);
+      if (e.isDirectory()) walk(full, [...parts, e.name]);
+      else if (e.name.endsWith('.md')) {
+        const meta = frontmatter(full) || {};
+        const name = meta.name || [...parts, e.name.slice(0, -3)].join(':');
+        found.push({ name: prefix + name, description: meta.description || '', hint: meta['argument-hint'] || '', source });
+      }
+    }
+  };
+  walk(dir, []);
+  return found;
+}
+
+function pluginCommands() {
+  let installed;
+  try {
+    installed = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.claude', 'plugins', 'installed_plugins.json'), 'utf8')).plugins || {};
+  } catch {
+    return [];
+  }
+  return Object.entries(installed).flatMap(([id, installs]) => {
+    const install = Array.isArray(installs) ? installs[0] : installs;
+    if (!install?.installPath) return [];
+    const prefix = `${id.split('@')[0]}:`;
+    return [...skillsIn(path.join(install.installPath, 'skills'), 'plugin', prefix), ...commandsIn(path.join(install.installPath, 'commands'), 'plugin', prefix)];
+  });
+}
+
+const commandCache = new Map();
+
+async function listCommands(wtPath) {
+  if (!(await listWorktrees()).some((w) => w.path === wtPath)) return null;
+  const cached = commandCache.get(wtPath);
+  if (cached && Date.now() - cached.at < 10000) return cached.list;
+  const userDir = path.join(os.homedir(), '.claude');
+  const synced = path.join(userDir, 'skills', 'synced');
+  const all = [
+    ...skillsIn(path.join(wtPath, '.claude', 'skills'), 'project'),
+    ...commandsIn(path.join(wtPath, '.claude', 'commands'), 'project'),
+    ...skillsIn(path.join(userDir, 'skills'), 'user'),
+    ...commandsIn(path.join(userDir, 'commands'), 'user'),
+    ...subdirs(synced).flatMap((bucket) => skillsIn(path.join(synced, bucket), 'synced', 'anthropic-skills:')),
+    ...pluginCommands(),
+    ...BUILTIN_COMMANDS,
+  ];
+  const seen = new Set();
+  const list = all.filter((c) => !seen.has(c.name) && seen.add(c.name));
+  commandCache.set(wtPath, { at: Date.now(), list });
+  return list;
+}
+
 function readToken() {
   try {
     const token = fs.readFileSync(TOKEN_FILE, 'utf8').trim();
@@ -570,6 +697,11 @@ async function handleWrite(req, res, route) {
   if (!allowedWrite(req)) return json(res, 403, { error: 'Requête refusée.' });
   const body = await readBody(req);
   cache = null;
+  if (route === '/api/restart') {
+    json(res, 200, { ok: true, startedAt: STARTED_AT });
+    setTimeout(() => spawn(path.join(__dirname, 'start.sh'), { detached: true, stdio: 'ignore' }).unref(), 200);
+    return;
+  }
   if (route === '/api/start') {
     const result = await startSession(body);
     return json(res, result.error ? 400 : 200, result);
@@ -612,8 +744,8 @@ http
       if (!allowedHost(req)) return send(res, 421, 'text/plain', 'Host not allowed. Add it to COCKPIT_HOSTS.');
       if (url.pathname === '/') return send(res, 200, 'text/html; charset=utf-8', page);
       if (!authorized(req)) return json(res, 401, { error: 'Token manquant ou invalide.' });
-      if (['/api/start', '/api/resume', '/api/close', '/api/app/start', '/api/app/stop', '/api/send', '/api/paste', '/api/keys'].includes(url.pathname)) return await handleWrite(req, res, url.pathname);
-      if (url.pathname === '/api/state') return json(res, 200, await snapshot());
+      if (['/api/restart', '/api/start', '/api/resume', '/api/close', '/api/app/start', '/api/app/stop', '/api/send', '/api/paste', '/api/keys'].includes(url.pathname)) return await handleWrite(req, res, url.pathname);
+      if (url.pathname === '/api/state') return json(res, 200, { ...(await snapshot()), startedAt: STARTED_AT });
       if (url.pathname === '/api/app') return json(res, 200, await appState());
       if (url.pathname === '/api/chat') {
         const chat = readChat(url.searchParams.get('session') || '');
@@ -623,6 +755,10 @@ http
         const target = await resolveTarget(url.searchParams.get('target'));
         const text = target ? await screen(target) : null;
         return text === null ? send(res, 409, 'text/plain', 'no tmux pane') : send(res, 200, 'text/plain; charset=utf-8', text);
+      }
+      if (url.pathname === '/api/commands') {
+        const list = await listCommands(url.searchParams.get('path') || '');
+        return list === null ? send(res, 400, 'text/plain', 'unknown worktree') : json(res, 200, list);
       }
       if (url.pathname === '/api/diff') {
         const result = await diff(url.searchParams.get('wt') || '', url.searchParams.get('file') || '');

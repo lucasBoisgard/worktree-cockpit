@@ -136,7 +136,15 @@
   .tool summary span { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tool.error summary b { color: var(--del); }
   .tool pre { margin: 0; border-top: 1px solid var(--border); padding: 8px 10px; max-height: 320px; overflow: auto; font: 11.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
-  .composer { border-top: 1px solid var(--border); padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .composer { position: relative; border-top: 1px solid var(--border); padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .suggest { position: absolute; left: 20px; right: 20px; bottom: calc(100% - 6px); max-height: 280px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(16,24,40,.18); padding: 4px; z-index: 5; }
+  .suggest[hidden] { display: none; }
+  .suggest button { display: flex; gap: 10px; align-items: baseline; width: 100%; text-align: left; border: 0; background: none; color: var(--text); padding: 6px 8px; border-radius: 6px; cursor: pointer; font: inherit; min-width: 0; }
+  .suggest button.on { background: var(--blue-bg); }
+  .suggest .cmd-name { font: 600 12.5px var(--mono); white-space: nowrap; }
+  .suggest .cmd-hint { font: 12px var(--mono); color: var(--faint); white-space: nowrap; }
+  .suggest .cmd-desc { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .suggest .cmd-tag { font-size: 11px; color: var(--faint); white-space: nowrap; }
   .composer-row { display: flex; gap: 8px; align-items: flex-end; }
   .composer textarea { flex: 1; min-height: 44px; max-height: 220px; resize: vertical; font: 13.5px/1.45 inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
   .composer textarea:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
@@ -206,6 +214,7 @@
       <button class="btn" data-filter="active">Actifs</button>
       <button class="btn" data-filter="all">Tous</button>
     </div>
+    <button class="btn" id="restart-btn" title="Relance start.sh : recharge server.js, index.html et la config">Recharger le cockpit</button>
     <button class="btn primary" id="new-btn">Nouvelle session</button>
   </div>
   <span class="updated" id="updated"></span>
@@ -219,6 +228,7 @@
     <div class="chat-bar" id="chat-bar"></div>
     <div class="chat" id="chat"></div>
     <div class="composer" id="composer">
+      <div class="suggest" id="suggest" role="listbox" hidden></div>
       <div class="composer-row">
         <textarea id="composer-input" placeholder="Écris à Claude… (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"></textarea>
         <button class="btn primary" id="composer-send">Envoyer</button>
@@ -459,13 +469,7 @@
   }
 
   function sorted(list) {
-    return [...list].sort((a, b) => {
-      const ra = STATUS[sessionStatus(a)].rank, rb = STATUS[sessionStatus(b)].rank;
-      if (ra !== rb) return ra - rb;
-      const ta = a.sessions[0]?.updatedAt || a.lastCommit?.at || 0;
-      const tb = b.sessions[0]?.updatedAt || b.lastCommit?.at || 0;
-      return tb - ta;
-    });
+    return [...list].sort((a, b) => (b.name === 'main') - (a.name === 'main') || a.name.localeCompare(b.name, 'fr', { numeric: true }));
   }
 
   const currentWt = () => (selected && selected !== SHELL ? state?.worktrees.find((w) => w.path === selected) : null);
@@ -785,6 +789,7 @@
     const input = $('composer-input');
     const text = input.value.trim();
     if (!text || !chatSession) return;
+    hideSuggest();
     $('composer-send').disabled = true;
     const result = await post('/api/send', { target: chatSession, text });
     $('composer-send').disabled = false;
@@ -853,7 +858,79 @@
     if (f) { selectedFile = f.dataset.file; renderPanel(); loadDiff(); }
   });
 
+  const SOURCE_LABEL = { project: 'projet', user: 'perso', synced: 'claude.ai', plugin: 'plugin', builtin: 'intégrée' };
+  const commandsCache = new Map();
+  let suggestions = [];
+  let suggestIndex = 0;
+
+  async function loadCommands(wtPath) {
+    const cached = commandsCache.get(wtPath);
+    if (cached && Date.now() - cached.at < 30000) return cached.list;
+    const res = await api(`/api/commands?path=${encodeURIComponent(wtPath)}`);
+    const list = res.ok ? await res.json() : [];
+    commandsCache.set(wtPath, { at: Date.now(), list });
+    return list;
+  }
+
+  function hideSuggest() { suggestions = []; $('suggest').hidden = true; }
+
+  function renderSuggest() {
+    const box = $('suggest');
+    if (!suggestions.length) { box.hidden = true; return; }
+    box.innerHTML = suggestions.map((c, i) => `<button type="button" role="option" data-cmd="${i}" class="${i === suggestIndex ? 'on' : ''}" title="${esc(c.description)}"><span class="cmd-name">/${esc(c.name)}</span>${c.hint ? `<span class="cmd-hint">${esc(c.hint)}</span>` : ''}<span class="cmd-desc">${esc(c.description)}</span><span class="cmd-tag">${c.interactive ? 'menu terminal · ' : ''}${SOURCE_LABEL[c.source] || ''}</span></button>`).join('');
+    box.hidden = false;
+    box.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+  }
+
+  async function updateSuggest() {
+    const value = $('composer-input').value;
+    const wt = currentWt();
+    const match = value.match(/^\/([^\s]*)$/);
+    if (!match || !wt) { hideSuggest(); return; }
+    const list = await loadCommands(wt.path);
+    if ($('composer-input').value !== value) return;
+    const query = match[1].toLowerCase();
+    const score = (c) => {
+      const name = c.name.toLowerCase();
+      if (name.startsWith(query)) return 0;
+      if (name.split(/[:-]/).some((part) => part.startsWith(query))) return 1;
+      if (name.includes(query)) return 2;
+      return c.description.toLowerCase().includes(query) ? 3 : -1;
+    };
+    suggestions = list.map((c) => ({ c, s: score(c) })).filter((x) => x.s >= 0).sort((a, b) => a.s - b.s || a.c.name.localeCompare(b.c.name)).map((x) => x.c).slice(0, 50);
+    suggestIndex = 0;
+    renderSuggest();
+  }
+
+  function applySuggest(i) {
+    const c = suggestions[i];
+    if (!c) return;
+    const input = $('composer-input');
+    input.value = `/${c.name} `;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    hideSuggest();
+  }
+
+  $('composer-input').addEventListener('input', updateSuggest);
+  $('composer-input').addEventListener('blur', () => setTimeout(hideSuggest, 150));
+  $('suggest').addEventListener('mousedown', (e) => {
+    const b = e.target.closest('[data-cmd]');
+    if (b) { e.preventDefault(); applySuggest(Number(b.dataset.cmd)); }
+  });
+
   $('composer-input').addEventListener('keydown', (e) => {
+    if (suggestions.length && !e.isComposing) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        suggestIndex = (suggestIndex + (e.key === 'ArrowDown' ? 1 : -1) + suggestions.length) % suggestions.length;
+        renderSuggest();
+        return;
+      }
+      const exact = $('composer-input').value === `/${suggestions[suggestIndex].name}`;
+      if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !exact)) { e.preventDefault(); applySuggest(suggestIndex); return; }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); hideSuggest(); return; }
+    }
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendMessage(); }
   });
 
@@ -883,6 +960,24 @@
     const b = e.target.closest('button');
     if (!b) return;
     filter = b.dataset.filter; localSet('filter', filter); renderGrid();
+  });
+
+  $('restart-btn').addEventListener('click', async () => {
+    const btn = $('restart-btn');
+    btn.disabled = true;
+    btn.textContent = 'Redémarrage…';
+    const result = await post('/api/restart', {});
+    if (!result.ok) { btn.disabled = false; btn.textContent = 'Recharger le cockpit'; toast(result.data.error || 'Redémarrage impossible.', 'error'); return; }
+    for (let i = 0; i < 60; i++) {
+      try {
+        const res = await api('/api/state');
+        if (res.ok && (await res.json()).startedAt !== result.data.startedAt) { location.reload(); return; }
+      } catch {}
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    btn.disabled = false;
+    btn.textContent = 'Recharger le cockpit';
+    toast('Le cockpit ne répond pas : regarde server.log ou relance start.sh.', 'error');
   });
 
   $('new-btn').addEventListener('click', () => { $('new-form').reset(); $('new-dialog').showModal(); $('new-worktree').focus(); });
