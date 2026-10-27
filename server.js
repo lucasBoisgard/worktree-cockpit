@@ -1055,11 +1055,12 @@ function dequeue(sessionId, id) {
   return { ok: true };
 }
 
-async function deliver(sessionId, text) {
+async function deliver(sessionId, text, queueWhenWaiting = false) {
   const session = readSession(String(sessionId || ''));
   if (!session) return 'unknown';
   if (!paneOf(session, await livePanes())) return 'offline';
-  if (['working', 'needs_input'].includes(session.status) && Date.now() - session.updatedAt < STALE_MS_SERVER) {
+  const busy = session.status === 'working' || (queueWhenWaiting && session.status === 'needs_input');
+  if (busy && Date.now() - session.updatedAt < STALE_MS_SERVER) {
     enqueue(session.sessionId, text);
     return 'queued';
   }
@@ -1073,7 +1074,7 @@ async function broadcast({ targets, text }) {
   if (!message || !Array.isArray(targets) || !targets.length) return { error: 'Message ou sessions manquants.' };
   const report = { sent: [], queued: [], offline: [] };
   for (const target of targets.slice(0, 50)) {
-    const outcome = await deliver(target, message);
+    const outcome = await deliver(target, message, true);
     (report[outcome] || report.offline).push(target);
   }
   return report;
@@ -1151,7 +1152,7 @@ async function sendCheckFailure({ path: wtPath, check }) {
     log = stripAnsi(result.stdout).split('\n').slice(-60).join('\n');
   }
   const text = `Le check « ${failing.name} » échoue sur la PR #${details.number}${failing.url ? ` (${failing.url})` : ''}.${log ? `\n\nFin du log en échec :\n\`\`\`\n${log}\n\`\`\`` : ''}\n\nAnalyse la cause et corrige-la.`;
-  const outcome = await deliver(session.sessionId, text);
+  const outcome = await deliver(session.sessionId, text, true);
   return outcome === 'offline' || outcome === 'unknown' ? { error: 'La session ne tourne pas dans tmux.' } : { ok: true, outcome };
 }
 
