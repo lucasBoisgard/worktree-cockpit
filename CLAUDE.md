@@ -6,3 +6,4 @@ Several Claude sessions may change the cockpit at the same time. `~/.claude/work
 - Test on a temporary port: symlink `token` and `cockpit.config.json` from the shared checkout (both git-ignored), then run `PORT=47xx HOST=127.0.0.1 node server.js`. Never restart the live instance yourself.
 - Commit, push and merge into `main` only when the user asks. Merge from the shared checkout when its working tree is clean, then the user reloads with the "Recharger le cockpit" button.
 - Remove the worktree once the branch is merged: `git -C ~/.claude/worktree-dashboard worktree remove ~/.claude/worktree-dashboard-worktrees/<slug>`.
+- Delete a branch as soon as it is merged, locally and on GitHub: `git -C ~/.claude/worktree-dashboard branch -d feat/<slug>` and `git -C ~/.claude/worktree-dashboard push origin --delete feat/<slug>` when it was pushed.
