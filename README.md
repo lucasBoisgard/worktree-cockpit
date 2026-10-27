@@ -65,6 +65,14 @@ Environment variables: `PORT` (default 8052 through `start.sh`), `HOST` or `COCK
 
 ## Notes
 
-- Only sessions running in tmux can be driven; others are read-only.
-- `index.html` and `server.js` are read at startup: rerun `start.sh` after editing them.
+- Only sessions running in tmux can be driven; others are read-only. "Reprendre dans le cockpit" reopens a read-only session in tmux with `claude --resume`.
+- A session counts as running in tmux when its state file names a live pane, or when Claude Code's own registry (`~/.claude/sessions/<pid>.json`) maps it to a live pane and its process is alive. The second check keeps a session drivable after the same conversation was resumed in another terminal.
+- Sessions with no message (no transcript) are hidden unless they are running, and so are sessions whose worktree directory was removed.
+- `index.html` and `server.js` are read at startup: after editing them, click "Recharger le cockpit" (it reruns `start.sh`) or rerun `start.sh`.
+
+## Uninstall
+
+1. Remove the cockpit entries from `~/.claude/settings.json` (the `statusLine` and the hooks pointing to this directory), or restore the `settings.json.bak-cockpit-*` backup written by the install.
+2. Remove the skill links: `rm ~/.claude/skills/run-app ~/.claude/skills/review-report`.
+3. Stop the server (`kill "$(cat ~/.claude/worktree-dashboard/server.pid)"`) and delete `~/.claude/worktree-dashboard`. `~/.claude/worktree-state/` and `~/.claude/worktree-reviews/` can be deleted too.
 - Claude Code auto mode refuses edits to `~/.claude/settings.json` and to the tmux driving code: switch to the default permission mode first.
