@@ -271,7 +271,7 @@ async function snapshot() {
   const described = await Promise.all(worktrees.map(describe));
   const byPath = new Map(described.map((d) => [d.path, d]));
   for (const session of readSessions()) {
-    const owner = ownerOf(session.cwd, worktrees);
+    const owner = fs.existsSync(session.cwd) && ownerOf(session.cwd, worktrees);
     if (!owner) continue;
     const live = !!paneOf(session, panes);
     if (!live && !hasTranscript(session)) continue;
