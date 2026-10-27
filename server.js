@@ -650,6 +650,7 @@ function reviewSystemPrompt(skills, reportFile) {
   return [
     'This session is a pull request review started from the worktree cockpit.',
     `Review skills available in this session: ${skills.join(', ')}.`,
+    'Start with the review-context skill: read the ticket linked in the pull request, its comments and the Slack threads they point to, before judging any code.',
     'Before reading the pull request, load with the Skill tool the review skills that fit it: always code-review, plus the specialised ones whose description matches what the pull request touches. Run them, then check every finding against the code before keeping it.',
     'Never post, comment, approve or request changes on the pull request yourself.',
     `When the review is done, write the report with the review-report skill to ${reportFile}: the cockpit renders it as colored blocks, one per finding. Then give a short summary in the conversation.`,
@@ -668,7 +669,7 @@ async function startSession({ worktree, prompt, kind, pr }) {
     fs.mkdirSync(REVIEWS_DIR, { recursive: true });
     fs.rmSync(path.join(REVIEWS_DIR, `${name}.report.json`), { force: true });
     fs.writeFileSync(path.join(REVIEWS_DIR, `${name}.json`), JSON.stringify({ kind: 'review', pr: prRef, startedAt: Date.now() }));
-    const skills = [...new Set([...reviewSkills(existing ? existing.path : REPO), 'review-report'])];
+    const skills = [...new Set(['review-context', ...reviewSkills(existing ? existing.path : REPO), 'review-report'])];
     args.push('--append-system-prompt', reviewSystemPrompt(skills, path.join(REVIEWS_DIR, `${name}.report.json`)));
     prompt = `Review the pull request ${prRef}.${prompt && String(prompt).trim() ? `\n\n${String(prompt).trim()}` : ''}`;
   }
