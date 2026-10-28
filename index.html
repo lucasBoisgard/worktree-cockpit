@@ -57,8 +57,6 @@
   .card.working { border-left-color: var(--blue); }
   .card.done { border-left-color: var(--green); }
   .card.selected { outline: 2px solid var(--blue); }
-  .card.shell-card { background: var(--term-bg); color: var(--term-fg); border-color: var(--term-bg); border-left-color: #5c6370; }
-  .card.shell-card .branch, .card.shell-card .hint { color: #8b929c; }
   .top { display: flex; align-items: flex-start; gap: 10px; }
   .name { font-weight: 650; font-size: 15px; word-break: break-all; }
   .branch { font-family: var(--mono); font-size: 12px; color: var(--muted); word-break: break-all; }
@@ -92,26 +90,8 @@
   .empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 60px 0; }
   .counter.limit-warn { background: var(--amber-bg); color: var(--amber); }
   .counter.limit-crit { background: var(--red-bg); color: var(--red); }
-  .card.usage-card { border-left-color: var(--blue); }
-  .card.usage-card.warn { border-left-color: var(--amber); }
-  .card.usage-card.crit { border-left-color: var(--red); }
   .badge.warn { background: var(--amber-bg); color: var(--amber); }
   .badge.crit { background: var(--red-bg); color: var(--red); }
-  .meters { display: flex; flex-direction: column; gap: 8px; }
-  .meter { display: grid; grid-template-columns: 64px minmax(0, 1fr) 46px; gap: 10px; align-items: center; font-size: 12px; }
-  .meter .label { color: var(--muted); font-weight: 600; }
-  .meter .track, .meter .fill { display: block; }
-  .meter .track { height: 8px; border-radius: 4px; background: var(--grey-bg); overflow: hidden; }
-  .meter .fill { height: 100%; border-radius: 4px; background: var(--green); }
-  .meter .fill.warn { background: var(--amber); }
-  .meter .fill.crit { background: var(--red); }
-  .meter .pct { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; }
-  .meter .pct.warn { color: var(--amber); }
-  .meter .pct.crit { color: var(--red); }
-  .remaining { font-size: 13px; color: var(--muted); }
-  .remaining b { font-size: 26px; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; margin-right: 4px; }
-  .remaining.warn b { color: var(--amber); }
-  .remaining.crit b { color: var(--red); }
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
   .tile { border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .tile.warn { border-color: var(--amber); }
@@ -355,6 +335,21 @@
   .auto-state.failed { background: var(--red-bg); color: var(--red); }
   .auto-state.paused { background: var(--grey-bg); color: var(--faint); }
   .notice { border-radius: 10px; padding: 10px 14px; font-size: 13px; background: var(--amber-bg); color: var(--amber); }
+  .tools-strip { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: -12px; }
+  .tool-pill { display: inline-flex; gap: 8px; align-items: center; border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; }
+  .tool-pill:hover { background: var(--surface-2); }
+  .tool-pill b { color: var(--text); font-weight: 600; }
+  .tool-pill.selected { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+  .pill-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .pill-dot.on { background: var(--green); }
+  .pill-sub { color: var(--faint); }
+  .pill-meter { display: inline-flex; gap: 5px; align-items: center; font-variant-numeric: tabular-nums; }
+  .pill-meter i { display: inline-block; width: 36px; height: 5px; border-radius: 3px; background: var(--grey-bg); overflow: hidden; }
+  .pill-meter em { display: block; height: 100%; background: var(--green); }
+  .pill-meter.warn { color: var(--amber); } .pill-meter.warn em { background: var(--amber); }
+  .pill-meter.crit { color: var(--red); font-weight: 650; } .pill-meter.crit em { background: var(--red); }
+  .tool-pill.tokens.warn { border-color: var(--amber); background: var(--amber-bg); }
+  .tool-pill.tokens.crit { border-color: var(--red); background: var(--red-bg); }
   .card.needs_input { box-shadow: 0 0 0 2px var(--amber), var(--shadow); }
   .card.focused { outline: 2px dashed var(--blue); outline-offset: 2px; }
   .card .pin { border: 0; background: none; color: var(--faint); cursor: pointer; font-size: 15px; padding: 0 2px; line-height: 1; }
@@ -1187,13 +1182,9 @@
 
   function shellCard() {
     const live = state.shell?.live;
-    return `<div class="card shell-card ${selected === SHELL ? 'selected' : ''}" data-shell="1">
-      <div class="top">
-        <div><div class="name">Terminal</div><div class="branch">bash · ${esc(state.repo)}</div></div>
-        <span class="badge shell"><span class="dot"></span>${live ? 'Ouvert' : 'Démarre au clic'}</span>
-      </div>
-      <div class="hint">Session tmux persistante, indépendante des worktrees. Elle survit à la fermeture de la page.</div>
-    </div>`;
+    return `<button class="tool-pill ${selected === SHELL ? 'selected' : ''}" data-shell="1" title="Session tmux persistante, indépendante des worktrees : elle survit à la fermeture de la page">
+      <span class="pill-dot ${live ? 'on' : ''}"></span><b>Terminal</b><span class="pill-sub">${live ? 'ouvert' : 'démarre au clic'}</span>
+    </button>`;
   }
 
   const level = (pct) => (pct >= LIMIT_CRIT ? 'crit' : pct >= LIMIT_WARN ? 'warn' : '');
@@ -1227,15 +1218,6 @@
     return `Réinitialisée dans ${left} (${at})`;
   }
 
-  function meters(windows) {
-    return `<div class="meters">${windows.map((w) => `
-      <div class="meter" title="${w.left} % restants · ${esc(resetText(w))}">
-        <span class="label">${w.label}</span>
-        <span class="track" role="meter" aria-label="Usage de la limite ${esc(w.label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${w.pct}"><span class="fill ${w.level}" style="width:${w.pct}%"></span></span>
-        <span class="pct ${w.level}">${w.pct} %</span>
-      </div>`).join('')}</div>`;
-  }
-
   function limitTiles(windows) {
     return `<div class="tiles">${windows.map((w) => `
       <div class="tile ${w.level}">
@@ -1250,18 +1232,15 @@
   const limitAlerts = () => limitWindows(state?.limits).filter((w) => w.level);
 
   function usageCard() {
-    const windows = limitWindows(state.limits);
+    const windows = limitWindows(state.limits).filter((w) => w.key !== 'spend_limit' || w.level);
     const alert = worst(windows.map((w) => w.level));
-    const badge = alert ? `<span class="badge ${alert}"><span class="dot"></span>${alert === 'crit' ? 'Limite presque atteinte' : 'Limite proche'}</span>` : `<span class="badge">${state.limits ? `relevé il y a ${ago(state.limits.at)}` : 'en attente'}</span>`;
-    const tightest = [...windows].sort((a, b) => b.pct - a.pct)[0];
-    return `<div class="card usage-card ${alert} ${selected === USAGE ? 'selected' : ''}" data-usage="1">
-      <div class="top">
-        <div><div class="name">Tokens utilisés</div><div class="branch">limites du compte Claude</div></div>
-        ${badge}
-      </div>
-      ${tightest ? `<div class="remaining ${tightest.level}"><b>${tightest.pct} %</b> utilisés sur la limite ${esc(tightest.label)}</div>${meters(windows)}` : '<div class="hint">Les limites s’affichent après la prochaine réponse de Claude dans une session.</div>'}
-    </div>`;
+    const meters = windows.map((w) => `<span class="pill-meter ${w.level}" title="${esc(w.label)} : ${w.pct} % utilisés · ${esc(resetText(w))}">${esc(w.label)} <i><em style="width:${w.pct}%"></em></i> ${w.pct} %</span>`).join('');
+    const title = `Limites du compte Claude${state.limits ? ` · relevé il y a ${ago(state.limits.at)}` : ''}`;
+    return `<button class="tool-pill tokens ${alert} ${selected === USAGE ? 'selected' : ''}" data-usage="1" title="${esc(title)}">
+      <b>Tokens</b>${meters || '<span class="pill-sub">en attente du premier relevé</span>'}
+    </button>`;
   }
+
 
   async function loadUsage() {
     try {
@@ -1466,7 +1445,7 @@
     const reviews = list.filter((w) => w.review);
     const empty = '<div class="empty">Aucun worktree actif</div>';
     const section = (title, count, body) => `<section class="grid-section"><h2>${title}${count === null ? '' : `<span class="count">${count}</span>`}</h2><div class="cards">${body}</div></section>`;
-    const parts = [section('Outils', null, shellCard() + usageCard())];
+    const parts = [`<div class="tools-strip">${shellCard()}${usageCard()}</div>`];
     if (order === 'state') {
       const byPinThenActivity = (a, b) => pins.has(b.path) - pins.has(a.path) || lastActivity(b) - lastActivity(a);
       const columns = [
@@ -1994,7 +1973,7 @@
     if (unarchiveBtn) { unarchive(unarchiveBtn.dataset.unarchive, !!unarchiveBtn.dataset.resume); return; }
     if (t.closest('.archives summary')) { setTimeout(() => { archivesOpen = !!document.querySelector('#grid .archives')?.open; }, 0); return; }
     if (t.closest('a')) return;
-    const c = t.closest('.card');
+    const c = t.closest('.card, .tool-pill');
     if (!c) return;
     select(c.dataset.shell ? SHELL : c.dataset.usage ? USAGE : c.dataset.path);
   });
