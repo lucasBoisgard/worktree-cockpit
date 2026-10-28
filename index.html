@@ -833,6 +833,9 @@
   const BRANCH_CHANGE_MS = 2 * 60 * 1000;
   let closing = null;
   let pendingOps = [];
+  let screenLoading = false;
+  let screenKey = '';
+  let screenLast = '';
   let flushTimer = null;
   let toastTimer = null;
   let order = localGet('order') || 'fixed';
@@ -1777,11 +1780,24 @@
 
   async function loadScreen() {
     const box = $(tab === 'app' ? 'app-screen' : 'screen');
-    if (!termAvailable() && tab === 'app') { box.innerHTML = '<div class="placeholder">Aucun build lancé depuis le cockpit. Les logs de la commande de lancement apparaîtront ici.</div>'; return; }
-    if (!termAvailable()) { box.innerHTML = '<div class="placeholder">Cette session ne tourne pas dans tmux. Reprends-la depuis l\'onglet Conversation pour obtenir un terminal.</div>'; return; }
-    const res = await api(`/api/screen?target=${encodeURIComponent(termTarget())}`).catch(() => null);
-    if (!res || !res.ok) return;
-    const text = await res.text();
+    if (!termAvailable() && tab === 'app') { screenKey = ''; box.innerHTML = '<div class="placeholder">Aucun build lancé depuis le cockpit. Les logs de la commande de lancement apparaîtront ici.</div>'; return; }
+    if (!termAvailable()) { screenKey = ''; box.innerHTML = '<div class="placeholder">Cette session ne tourne pas dans tmux. Reprends-la depuis l\'onglet Conversation pour obtenir un terminal.</div>'; return; }
+    if (screenLoading) return;
+    screenLoading = true;
+    try {
+      const target = termTarget();
+      const known = screenKey === `${tab}|${target}` ? screenLast : '';
+      const res = await api(`/api/screen?target=${encodeURIComponent(target)}${known ? `&hash=${known}` : ''}`).catch(() => null);
+      if (!res || !res.ok || res.status === 204) return;
+      renderScreen(box, await res.text(), `${tab}|${target}`, res.headers.get('X-Screen-Hash'));
+    } finally {
+      screenLoading = false;
+    }
+  }
+
+  function renderScreen(box, text, key, hash) {
+    screenKey = key;
+    screenLast = hash || '';
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
     box.innerHTML = ansiToHtml(text);
     if (nearBottom) box.scrollTop = box.scrollHeight;
@@ -1898,9 +1914,12 @@
     const ops = pendingOps;
     pendingOps = [];
     if (!ops.length) return;
-    const result = await post('/api/keys', { target: termTarget(), ops });
-    if (!result.ok) toast(result.data.error || 'Envoi impossible.', 'error');
-    setTimeout(loadScreen, 120);
+    const target = termTarget();
+    const key = `${tab}|${target}`;
+    const result = await post('/api/keys', { target, ops, withScreen: true, hash: screenKey === key ? screenLast : '' });
+    if (!result.ok) { toast(result.data.error || 'Envoi impossible.', 'error'); return; }
+    if (result.data.screen != null && termTarget() === target) renderScreen($(tab === 'app' ? 'app-screen' : 'screen'), result.data.screen, key, result.data.hash);
+    setTimeout(loadScreen, 300);
   }
 
   async function sendKey(key) {

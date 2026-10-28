@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { execFile, execFileSync, spawn } = require('node:child_process');
 const crypto = require('node:crypto');
+const zlib = require('node:zlib');
 
 function expandEnv(value) {
   if (typeof value === 'string') return value.replace(/\$\{(\w+)\}/g, (_, name) => process.env[name] || '');
@@ -1633,10 +1634,17 @@ function readBody(req) {
   });
 }
 
-function send(res, status, type, body) {
-  res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY' });
+function send(res, status, type, body, extraHeaders = {}) {
+  const headers = { 'Content-Type': type, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY', Vary: 'Accept-Encoding', ...extraHeaders };
+  if (body && Buffer.byteLength(body) > 2048 && /\bgzip\b/.test(res.req?.headers['accept-encoding'] || '')) {
+    headers['Content-Encoding'] = 'gzip';
+    body = zlib.gzipSync(body, { level: 4 });
+  }
+  res.writeHead(status, headers);
   res.end(body);
 }
+
+const screenHash = (text) => crypto.createHash('md5').update(text).digest('hex');
 
 const json = (res, status, data) => send(res, status, 'application/json', JSON.stringify(data));
 
@@ -1712,7 +1720,11 @@ async function handleWrite(req, res, route) {
   }
   if (route === '/api/keys') {
     await sendOps(target, Array.isArray(body.ops) ? body.ops.slice(0, 200) : []);
-    return json(res, 200, { ok: true });
+    if (!body.withScreen) return json(res, 200, { ok: true });
+    await sleep(40);
+    const text = await screen(target);
+    const hash = text === null ? null : screenHash(text);
+    return json(res, 200, { ok: true, hash, screen: hash && hash !== body.hash ? text : null });
   }
   return json(res, 404, { error: 'not found' });
 }
@@ -1756,7 +1768,9 @@ http
       if (url.pathname === '/api/screen') {
         const target = await resolveTarget(url.searchParams.get('target'));
         const text = target ? await screen(target) : null;
-        return text === null ? send(res, 409, 'text/plain', 'no tmux pane') : send(res, 200, 'text/plain; charset=utf-8', text);
+        if (text === null) return send(res, 409, 'text/plain', 'no tmux pane');
+        const hash = screenHash(text);
+        return hash === url.searchParams.get('hash') ? send(res, 204, 'text/plain', '', { 'X-Screen-Hash': hash }) : send(res, 200, 'text/plain; charset=utf-8', text, { 'X-Screen-Hash': hash });
       }
       if (url.pathname === '/api/commands') {
         const list = await listCommands(url.searchParams.get('path') || '');
