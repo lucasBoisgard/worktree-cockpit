@@ -498,6 +498,61 @@
     .report-grid { grid-template-columns: minmax(0, 1fr); }
     .minimap { display: none; }
   }
+  .msg .read { border: 0; background: none; color: var(--blue); font-size: 11.5px; cursor: pointer; padding: 0; margin-left: 8px; }
+  .msg .read-top { float: right; margin: -2px -4px 4px 10px; border: 1px solid var(--border); background: var(--surface); color: var(--blue); font-size: 11.5px; font-weight: 600; border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+  .peek .read { border: 0; background: none; color: var(--blue); font-weight: 600; cursor: pointer; padding: 0; margin-left: 6px; }
+
+  dialog.reader { width: min(1200px, calc(100vw - 32px)); height: calc(100vh - 48px); max-height: none; overflow: hidden; }
+  .reader-shell { display: flex; flex-direction: column; height: 100%; }
+  .reader-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--border); }
+  .reader-title { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .reader-title b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .reader-title span { font-size: 12px; color: var(--muted); }
+  .reader-actions { display: flex; gap: 6px; align-items: center; }
+  .reader-actions .pos { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 44px; text-align: center; }
+  .reader-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 230px minmax(0, 1fr); }
+  .reader-body.no-toc { grid-template-columns: minmax(0, 1fr); }
+  .reader-toc { border-right: 1px solid var(--border); overflow-y: auto; padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; background: var(--surface-2); }
+  .reader-toc .toc-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 0 8px 8px; }
+  .reader-toc a { display: block; padding: 4px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 12.5px; line-height: 1.35; border-left: 2px solid transparent; }
+  .reader-toc a.l2 { padding-left: 16px; } .reader-toc a.l3, .reader-toc a.l4 { padding-left: 26px; font-size: 12px; }
+  .reader-toc a:hover { background: var(--surface); color: var(--text); }
+  .reader-toc a.on { color: var(--blue); border-left-color: var(--blue); background: var(--surface); }
+  .reader-scroll { overflow-y: auto; scroll-behavior: smooth; }
+  .reader-doc { max-width: 78ch; margin: 0 auto; padding: 28px 36px 80px; font-size: 15.5px; line-height: 1.7; overflow-wrap: anywhere; }
+  .reader-doc > :first-child { margin-top: 0; }
+  .reader-doc h1, .reader-doc h2, .reader-doc h3, .reader-doc h4 { line-height: 1.3; margin: 1.6em 0 .5em; scroll-margin-top: 16px; }
+  .reader-doc h1 { font-size: 26px; letter-spacing: -.01em; }
+  .reader-doc h2 { font-size: 20px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .reader-doc h3 { font-size: 16.5px; }
+  .reader-doc h4 { font-size: 15px; color: var(--muted); }
+  .reader-doc p { margin: 0 0 .9em; }
+  .reader-doc ul, .reader-doc ol { margin: 0 0 .9em; padding-left: 1.5em; }
+  .reader-doc li { margin: .25em 0; }
+  .reader-doc li > ul, .reader-doc li > ol { margin: .25em 0 0; }
+  .reader-doc li::marker { color: var(--faint); }
+  .reader-doc li.todo-item { list-style: none; margin-left: -1.3em; }
+  .reader-scroll:focus { outline: none; }
+  .reader-doc a { color: var(--blue); }
+  .reader-doc code { font: .86em var(--mono); background: var(--surface-2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 5px; }
+  .reader-doc hr { border: 0; border-top: 1px solid var(--border); margin: 1.6em 0; }
+  .reader-doc blockquote { margin: 0 0 .9em; padding: 4px 0 4px 14px; border-left: 3px solid var(--blue); color: var(--muted); }
+  .reader-doc .code-block { position: relative; margin: 0 0 1em; }
+  .reader-doc .code-block pre { margin: 0; background: var(--term-bg); color: var(--term-fg); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: 13px/1.6 var(--mono); }
+  .reader-doc .code-block code { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; }
+  .reader-doc .code-block .lang { position: absolute; top: 6px; right: 70px; font: 11px var(--mono); color: #8b929c; }
+  .reader-doc .copy-code { position: absolute; top: 6px; right: 8px; font-size: 11px; border: 1px solid #2a2f3a; background: #1d2129; color: var(--term-fg); border-radius: 5px; padding: 2px 8px; cursor: pointer; }
+  .reader-doc .table-wrap { overflow-x: auto; margin: 0 0 1em; border: 1px solid var(--border); border-radius: 8px; }
+  .reader-doc table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .reader-doc th, .reader-doc td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  .reader-doc th { background: var(--surface-2); font-weight: 650; }
+  .reader-doc tr:last-child td { border-bottom: 0; }
+  @media (max-width: 760px) {
+    dialog.reader { width: 100vw; height: 100vh; border-radius: 0; }
+    .reader-body { grid-template-columns: minmax(0, 1fr); }
+    .reader-toc { display: none; }
+    .reader-doc { padding: 20px 16px 60px; }
+  }
 </style>
 </head>
 <body>
@@ -777,6 +832,8 @@
       <kbd>Espace</kbd><span>Déplier le dernier message de la carte</span>
       <kbd>a</kbd><span>Autoriser la permission en attente (touche 1)</span>
       <kbd>1-6</kbd><span>Changer d'onglet dans le panneau ouvert</span>
+      <kbd>l</kbd><span>Lire la dernière réponse de Claude dans le lecteur</span>
+      <kbd>j / k</kbd><span>Réponse suivante ou précédente, dans le lecteur</span>
       <kbd>n</kbd><span>Nouvelle session</span>
       <kbd>H</kbd><span>Historique</span>
       <kbd>i</kbd><span>Notifications</span>
@@ -784,6 +841,25 @@
       <kbd>?</kbd><span>Cette aide</span>
     </div>
     <div class="buttons"><button class="btn" data-dismiss>Fermer</button></div>
+  </div>
+</dialog>
+
+<dialog id="reader-dialog" class="reader">
+  <div class="reader-shell">
+    <div class="reader-head">
+      <div class="reader-title"><b id="reader-title"></b><span id="reader-meta"></span></div>
+      <div class="reader-actions">
+        <button class="btn" data-reader-step="-1" title="Réponse précédente (k)">‹</button>
+        <span class="pos" id="reader-pos"></span>
+        <button class="btn" data-reader-step="1" title="Réponse suivante (j)">›</button>
+        <button class="btn" id="reader-copy">Copier le Markdown</button>
+        <button class="btn" data-dismiss>Fermer</button>
+      </div>
+    </div>
+    <div class="reader-body" id="reader-body">
+      <nav class="reader-toc" id="reader-toc"></nav>
+      <div class="reader-scroll" id="reader-scroll" tabindex="0"><article class="reader-doc" id="reader-doc"></article></div>
+    </div>
   </div>
 </dialog>
 
@@ -1092,6 +1168,169 @@
     }).join('');
   }
 
+  function inlineMd(text) {
+    return String(text).split(/(`[^`\n]+`)/).map((part) => {
+      if (/^`[^`]+`$/.test(part)) return `<code>${esc(part.slice(1, -1))}</code>`;
+      const links = [];
+      const marked = part.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, label, url) => `\u0000${links.push([label, url]) - 1}\u0000`);
+      return escLink(marked)
+        .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+        .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])/g, '$1<i>$2</i>')
+        .replace(/(^|[^\w])_([^_\s][^_]*?)_(?!\w)/g, '$1<i>$2</i>')
+        .replace(/~~([^~]+)~~/g, '<s>$1</s>')
+        .replace(/\u0000(\d+)\u0000/g, (m, n) => `<a href="${esc(links[n][1])}" target="_blank" rel="noopener">${esc(links[n][0])}</a>`);
+    }).join('');
+  }
+
+  function renderList(items) {
+    let html = '';
+    const stack = [];
+    for (const item of items) {
+      while (stack.length && item.indent < stack[stack.length - 1].indent) html += `</li></${stack.pop().tag}>`;
+      const top = stack[stack.length - 1];
+      if (!top || item.indent > top.indent) {
+        const tag = item.ordered ? 'ol' : 'ul';
+        stack.push({ indent: item.indent, tag });
+        html += `<${tag}${item.ordered && item.start > 1 ? ` start="${item.start}"` : ''}>`;
+      } else html += '</li>';
+      const task = item.text.match(/^\[([ xX])\]\s+(.*)$/);
+      html += task ? `<li class="todo-item"><input type="checkbox" disabled ${task[1] === ' ' ? '' : 'checked'}> ${inlineMd(task[2])}` : `<li>${inlineMd(item.text)}`;
+    }
+    while (stack.length) html += `</li></${stack.pop().tag}>`;
+    return html;
+  }
+
+  function richMd(text, toc = []) {
+    const lines = String(text || '').replace(/\r/g, '').split('\n');
+    const LIST = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+    const isSep = (l) => l.includes('-') && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+    const isTable = (k) => lines[k].includes('|') && k + 1 < lines.length && isSep(lines[k + 1]);
+    const cells = (l) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+    let html = '';
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      if (!line.trim()) { i++; continue; }
+      const fence = line.match(/^\s*(```|~~~)\s*([\w+#.-]*)/);
+      if (fence) {
+        const body = [];
+        i++;
+        while (i < lines.length && !lines[i].trim().startsWith(fence[1])) body.push(lines[i++]);
+        i++;
+        html += `<div class="code-block">${fence[2] ? `<span class="lang">${esc(fence[2])}</span>` : ''}<button class="copy-code" data-copy-code>Copier</button><pre><code>${esc(body.join('\n'))}</code></pre></div>`;
+        continue;
+      }
+      const heading = line.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/);
+      if (heading) {
+        const level = Math.min(heading[1].length, 4);
+        const id = `reader-h-${toc.length}`;
+        toc.push({ id, level, text: heading[2].replace(/[*`_]/g, '') });
+        html += `<h${level} id="${id}">${inlineMd(heading[2])}</h${level}>`;
+        i++;
+        continue;
+      }
+      if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { html += '<hr>'; i++; continue; }
+      if (/^\s*>/.test(line)) {
+        const body = [];
+        while (i < lines.length && /^\s*>/.test(lines[i])) body.push(lines[i++].replace(/^\s*>\s?/, ''));
+        html += `<blockquote>${richMd(body.join('\n'), toc)}</blockquote>`;
+        continue;
+      }
+      if (isTable(i)) {
+        const head = cells(line);
+        const aligns = cells(lines[i + 1]).map((c) => (c.startsWith(':') && c.endsWith(':') ? 'center' : c.endsWith(':') ? 'right' : ''));
+        i += 2;
+        const rows = [];
+        while (i < lines.length && lines[i].trim() && lines[i].includes('|')) rows.push(cells(lines[i++]));
+        const cell = (tag, c, k) => `<${tag}${aligns[k] ? ` style="text-align:${aligns[k]}"` : ''}>${inlineMd(c)}</${tag}>`;
+        html += `<div class="table-wrap"><table><thead><tr>${head.map((c, k) => cell('th', c, k)).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c, k) => cell('td', c, k)).join('')}</tr>`).join('')}</tbody></table></div>`;
+        continue;
+      }
+      if (LIST.test(line)) {
+        const items = [];
+        while (i < lines.length) {
+          const m = lines[i].match(LIST);
+          if (m) { items.push({ indent: m[1].replace(/\t/g, '    ').length, ordered: /\d/.test(m[2]), start: parseInt(m[2], 10), text: m[3] }); i++; continue; }
+          if (lines[i].trim() && /^\s{2,}\S/.test(lines[i]) && items.length) { items[items.length - 1].text += ` ${lines[i].trim()}`; i++; continue; }
+          if (!lines[i].trim() && i + 1 < lines.length && LIST.test(lines[i + 1])) { i++; continue; }
+          break;
+        }
+        html += renderList(items);
+        continue;
+      }
+      const para = [lines[i++].trim()];
+      while (i < lines.length && lines[i].trim() && !/^\s*(```|~~~|#{1,6}\s|>)/.test(lines[i]) && !LIST.test(lines[i]) && !isTable(i)) para.push(lines[i++].trim());
+      html += `<p>${para.map(inlineMd).join('<br>')}</p>`;
+    }
+    return html;
+  }
+
+  let reader = null;
+
+  function openReader(list, pos, title) {
+    if (!list.length) { toast('Aucune réponse de Claude à lire.', 'error'); return; }
+    reader = { list, pos: Math.max(0, Math.min(pos, list.length - 1)), title };
+    renderReader();
+    if (!$('reader-dialog').open) $('reader-dialog').showModal();
+    $('reader-scroll').focus();
+    spyReader();
+  }
+
+  function assistantList(items) {
+    return items.map((item, index) => ({ ...item, index })).filter((item) => item.kind === 'assistant' && item.text?.trim());
+  }
+
+  function openReaderAt(index) {
+    const list = assistantList(chatItems);
+    const pos = list.findIndex((item) => item.index === index);
+    openReader(list, pos < 0 ? list.length - 1 : pos, currentWt()?.name || '');
+  }
+
+  async function openReaderFor(sessionId, title) {
+    const res = await api(`/api/chat?session=${encodeURIComponent(sessionId)}`).catch(() => null);
+    if (!res?.ok) { toast('Conversation introuvable.', 'error'); return; }
+    const list = assistantList((await res.json()).items);
+    openReader(list, list.length - 1, title);
+  }
+
+  function renderReader() {
+    const item = reader.list[reader.pos];
+    const toc = [];
+    $('reader-doc').innerHTML = richMd(item.text, toc);
+    const entries = toc.filter((h) => h.level <= 3);
+    $('reader-toc').innerHTML = entries.length > 1 ? `<div class="toc-title">Sommaire</div>${entries.map((h) => `<a href="#${h.id}" data-toc="${h.id}" class="l${h.level}">${esc(h.text)}</a>`).join('')}` : '';
+    $('reader-body').classList.toggle('no-toc', entries.length < 2);
+    $('reader-toc').hidden = entries.length < 2;
+    const words = item.text.split(/\s+/).filter(Boolean).length;
+    const at = item.at ? new Date(item.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    $('reader-title').textContent = reader.title ? `Claude · ${reader.title}` : 'Claude';
+    $('reader-meta').textContent = [at, `${words} mots`, `${Math.max(1, Math.round(words / 230))} min de lecture`].filter(Boolean).join(' · ');
+    $('reader-pos').textContent = `${reader.pos + 1} / ${reader.list.length}`;
+    document.querySelector('[data-reader-step="-1"]').disabled = reader.pos === 0;
+    document.querySelector('[data-reader-step="1"]').disabled = reader.pos === reader.list.length - 1;
+    $('reader-scroll').style.scrollBehavior = 'auto';
+    $('reader-scroll').scrollTop = 0;
+    $('reader-scroll').style.scrollBehavior = '';
+    spyReader();
+  }
+
+  function stepReader(delta) {
+    if (!reader) return;
+    const pos = reader.pos + delta;
+    if (pos < 0 || pos >= reader.list.length) return;
+    reader.pos = pos;
+    renderReader();
+  }
+
+  function spyReader() {
+    const links = [...$('reader-toc').querySelectorAll('[data-toc]')];
+    if (!links.length) return;
+    const top = $('reader-scroll').getBoundingClientRect().top + 40;
+    let current = links[0].dataset.toc;
+    for (const link of links) if ($(link.dataset.toc).getBoundingClientRect().top <= top) current = link.dataset.toc;
+    for (const link of links) link.classList.toggle('on', link.dataset.toc === current);
+  }
+
   function sessionStatus(wt) {
     const s = wt.sessions[0];
     if (!s) return 'none';
@@ -1395,7 +1634,7 @@
       else if (s.permission) parts.push(`<div class="quick-keys">${keyBtn(1, 'Autoriser', 'allow')}${keyBtn(2, 'Toujours autoriser')}${keyBtn(3, 'Refuser', 'deny')}</div>`);
     }
     if (s.lastAssistant && ['done', 'idle'].includes(st)) {
-      parts.push(`<div class="peek ${openPeeks.has(wt.path) ? 'open' : ''}" data-peek="${esc(wt.path)}" title="Clique pour déplier"><b>Claude :</b> ${esc(s.lastAssistant)}</div>`);
+      parts.push(`<div class="peek ${openPeeks.has(wt.path) ? 'open' : ''}" data-peek="${esc(wt.path)}" title="Clique pour déplier"><b>Claude :</b> ${esc(s.lastAssistant)}<button class="read" data-read-session="${esc(s.sessionId)}" data-read-title="${esc(wt.name)}">Lire ⤢</button></div>`);
     }
     if (s.live && st !== 'working') parts.push(`<form class="quick" data-quick="${esc(s.sessionId)}"><input name="q" placeholder="${st === 'needs_input' ? 'Répondre à Claude…' : 'Message rapide à Claude…'}" autocomplete="off" aria-label="Message rapide à Claude"></form>`);
     return parts.join('');
@@ -1891,7 +2130,7 @@
         const cp = checkpointAt(item.at);
         return `<div class="msg user ${mark}">${escLink(item.text)}<span class="when">${time(item.at)}</span></div>${cp ? `<button class="since-link" data-since="${esc(cp.sha)}">Changements depuis ce message</button>` : ''}`;
       }
-      if (item.kind === 'assistant') return `<div class="msg assistant ${mark}">${md(item.text)}<span class="when">${time(item.at)}<button class="delegate" data-delegate="${i}" title="Lancer une session liée pour cette sous-tâche">Déléguer</button></span></div>`;
+      if (item.kind === 'assistant') return `<div class="msg assistant ${mark}">${item.text.length > 900 ? `<button class="read-top" data-read="${i}" title="Ouvrir dans le lecteur (l)">Lire ⤢</button>` : ''}${md(item.text)}<span class="when">${time(item.at)}<button class="read" data-read="${i}">Lecteur</button><button class="delegate" data-delegate="${i}" title="Lancer une session liée pour cette sous-tâche">Déléguer</button></span></div>`;
       return `<details class="tool ${item.error ? 'error' : ''} ${mark}" data-index="${i}" ${opened.has(String(i)) ? 'open' : ''}><summary><b>${esc(item.tool)}</b><span>${escLink(item.detail)}</span></summary>${item.result ? `<pre>${escLink(item.result)}</pre>` : ''}</details>`;
     }).join('') + (awaiting ? `<div class="awaiting-note">${esc(awaiting)}${session.live ? ' · <button data-goto="term">Répondre dans le terminal</button>' : ''}</div>` : '');
     if (nearBottom || force) box.scrollTop = box.scrollHeight;
@@ -2115,6 +2354,8 @@
       setTimeout(refresh, 800);
       return;
     }
+    const readSession = t.closest('[data-read-session]');
+    if (readSession) { openReaderFor(readSession.dataset.readSession, readSession.dataset.readTitle); return; }
     const peek = t.closest('[data-peek]');
     if (peek) { openPeeks.has(peek.dataset.peek) ? openPeeks.delete(peek.dataset.peek) : openPeeks.add(peek.dataset.peek); peek.classList.toggle('open'); return; }
     const prBtn = t.closest('[data-pr]');
@@ -2199,7 +2440,7 @@
     if (dir) { collapsedDirs.has(dir.dataset.dir) ? collapsedDirs.delete(dir.dataset.dir) : collapsedDirs.add(dir.dataset.dir); renderPanel(); return; }
     const step = e.target.closest('[data-step]');
     if (step) { stepFile(Number(step.dataset.step)); return; }
-    if (e.target.closest('[data-copy-path]')) { navigator.clipboard?.writeText(selectedFile).then(() => toast('Chemin copié.'), () => toast('Copie impossible.', 'error')); return; }
+    if (e.target.closest('[data-copy-path]')) { copyText(selectedFile).then((ok) => toast(ok ? 'Chemin copié.' : 'Copie impossible.', ok ? '' : 'error')); return; }
     if (e.target.closest('[data-wide]')) { changesWide = !changesWide; localSet('changesWide', changesWide ? '1' : '0'); renderTabs(); renderDiff(); }
   });
 
@@ -2342,6 +2583,23 @@
   });
 
   $('new-btn').addEventListener('click', () => openNewSession());
+
+  $('reader-dialog').addEventListener('click', async (e) => {
+    if (e.target === $('reader-dialog')) { $('reader-dialog').close(); return; }
+    const step = e.target.closest('[data-reader-step]');
+    if (step) { stepReader(Number(step.dataset.readerStep)); return; }
+    const toc = e.target.closest('[data-toc]');
+    if (toc) { e.preventDefault(); $(toc.dataset.toc).scrollIntoView({ block: 'start' }); return; }
+    const code = e.target.closest('[data-copy-code]');
+    if (code) { const ok = await copyText(code.parentElement.querySelector('code').textContent); code.textContent = ok ? 'Copié' : 'Échec'; setTimeout(() => (code.textContent = 'Copier'), 1500); return; }
+    if (e.target.closest('#reader-copy')) { const ok = await copyText(reader.list[reader.pos].text); toast(ok ? 'Markdown copié.' : 'Copie impossible.', ok ? '' : 'error'); }
+  });
+  $('reader-dialog').addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'j' || e.key === 'ArrowRight') { e.preventDefault(); stepReader(1); }
+    else if (e.key === 'k' || e.key === 'ArrowLeft') { e.preventDefault(); stepReader(-1); }
+  });
+  $('reader-scroll').addEventListener('scroll', spyReader, { passive: true });
 
   document.querySelectorAll('dialog [data-dismiss]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
 
@@ -2749,6 +3007,8 @@
       refresh();
       return;
     }
+    const readBtn = t.closest('[data-read]');
+    if (readBtn) { openReaderAt(Number(readBtn.dataset.read)); return; }
     const delegateBtn = t.closest('[data-delegate]');
     if (delegateBtn) { delegate(Number(delegateBtn.dataset.delegate)); return; }
     const commentBtn = t.closest('[data-comment]');
@@ -2981,6 +3241,12 @@
       return;
     }
     if (/^[1-6]$/.test(e.key) && panelOpen) { document.querySelectorAll('#tabs button')[Number(e.key) - 1]?.click(); return; }
+    if (e.key === 'l' && panelOpen && currentSession()) { e.preventDefault(); openReaderFor(currentSession().sessionId, currentWt()?.name); return; }
+    if (e.key === 'l' && focusedCard()?.dataset.path) {
+      const wt = state.worktrees.find((w) => w.path === focusedCard().dataset.path);
+      if (wt?.sessions[0]) { e.preventDefault(); openReaderFor(wt.sessions[0].sessionId, wt.name); }
+      return;
+    }
     if (e.key === 'n') { e.preventDefault(); openNewSession(); return; }
     if (e.key === 'H' || e.key === 'h') { e.preventDefault(); openHistory(); return; }
     if (e.key === 'i') { openInbox(); return; }
