@@ -223,6 +223,19 @@
   .code.M { color: var(--amber); } .code.A, .code.U { color: var(--add); } .code.D { color: var(--del); }
   .file .fpath { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; flex: 1; }
   .file .fstat { font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+  .file.nested { padding-left: 22px; }
+  .dir { display: flex; gap: 6px; align-items: center; padding: 6px 8px 2px; font: 11px var(--mono); color: var(--faint); cursor: pointer; border: 0; background: none; width: 100%; text-align: left; }
+  .dir:hover { color: var(--text); }
+  .dir .dpath { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; flex: 1; }
+  .dir .caret { width: 10px; }
+  .files-sum { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .file-filter { font: 12px inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; width: 100%; }
+  .file-tree { display: flex; flex-direction: column; }
+  aside.wide { width: 100vw; }
+  .diff-head { position: sticky; top: 0; z-index: 1; display: flex; gap: 8px; align-items: center; padding: 8px 14px; background: var(--surface); border-bottom: 1px solid var(--border); font-family: inherit; }
+  .diff-head .dpath { font: 12px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; flex: 1; }
+  .diff-head .pos { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .diff-head .btn { padding: 3px 8px; }
   .tl { font-size: 12px; display: grid; grid-template-columns: 44px 1fr; gap: 6px; }
   .tl .when { color: var(--faint); font-variant-numeric: tabular-nums; }
   .tl .what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -580,7 +593,11 @@
   </div>
   <div class="view" id="changes-view" hidden>
     <div class="side-grid">
-      <div class="side" id="side"></div>
+      <div class="side">
+        <div id="side" style="display: flex; flex-direction: column; gap: 16px;"></div>
+        <input class="file-filter" id="file-filter" type="search" placeholder="Filtrer les fichiers" aria-label="Filtrer les fichiers">
+        <div class="file-tree" id="file-tree"></div>
+      </div>
       <div class="diff" id="diff"><div class="placeholder">Choisis un fichier pour voir son diff</div></div>
     </div>
   </div>
@@ -755,6 +772,7 @@
       <kbd>Ctrl K</kbd><span>Palette de commandes</span>
       <kbd>j</kbd> <span>Carte suivante</span>
       <kbd>k</kbd><span>Carte précédente</span>
+      <kbd>j / k</kbd><span>Fichier suivant ou précédent, dans l'onglet Changements</span>
       <kbd>Entrée</kbd><span>Ouvrir la carte sélectionnée</span>
       <kbd>Espace</kbd><span>Déplier le dernier message de la carte</span>
       <kbd>a</kbd><span>Autoriser la permission en attente (touche 1)</span>
@@ -849,6 +867,10 @@
   let inboxEvents = [];
   let since = null;
   let sinceFiles = null;
+  let ticket = null;
+  let fileFilter = '';
+  let changesWide = localGet('changesWide') === '1';
+  const collapsedDirs = new Set();
   const reviewComments = new Map();
   let lastDiffText = '';
   let delegateParent = null;
@@ -1501,6 +1523,7 @@
     $('chat-view').hidden = tab !== 'chat';
     $('term-view').hidden = tab !== 'term';
     $('changes-view').hidden = tab !== 'changes';
+    $('panel').classList.toggle('wide', tab === 'changes' && changesWide);
     $('usage-view').hidden = tab !== 'usage';
     $('app-view').hidden = tab !== 'app';
     $('checks-view').hidden = tab !== 'checks';
@@ -1533,34 +1556,130 @@
     renderChatBar(wt);
     renderComposer(s);
     updateMode();
-    const shown = since ? sinceFiles || [] : wt.files;
-    const files = shown.map((f) => {
+    const shown = shownFiles();
+    const checkpoints = [...(s?.checkpoints || [])].reverse();
+    const commits = ticket?.path === wt.path ? ticket.commits : [];
+    const option = (value, label) => `<option value="${esc(value)}" ${(since || '') === value ? 'selected' : ''}>${esc(label)}</option>`;
+    const scopeBox = commits.length || checkpoints.length ? `<div class="since-box"><h3>Périmètre</h3>
+        <select id="since-select" aria-label="Périmètre des changements">
+          ${commits.length ? option('branch', `Tout le ticket · ${commits.length} commit${commits.length > 1 ? 's' : ''} depuis ${ticket.base}`) : ''}
+          ${option('', 'Non commité')}
+          ${commits.length ? `<optgroup label="Un commit">${commits.map((c) => option(`commit:${c.sha}`, `${c.sha.slice(0, 7)} · ${String(c.subject).slice(0, 70)}`)).join('')}</optgroup>` : ''}
+          ${checkpoints.length ? `<optgroup label="Depuis un tour de Claude">${checkpoints.map((c, i) => option(c.sha, `Avant le tour ${checkpoints.length - i} · ${new Date(c.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${String(c.prompt || '').slice(0, 50)}`)).join('')}</optgroup>` : ''}
+        </select>
+        ${isCheckpoint(since) ? '<button class="btn danger" id="restore-btn" title="Remet les fichiers suivis dans leur état d\'avant ce tour">Restaurer ce point</button>' : ''}
+      </div>` : '';
+    const added = shown.reduce((n, f) => n + (f.added || 0), 0);
+    const deleted = shown.reduce((n, f) => n + (f.deleted || 0), 0);
+    const sum = shown.length ? `<div class="files-sum">${shown.length} fichier${shown.length > 1 ? 's' : ''} · <span class="plus">+${added}</span> <span class="minus">−${deleted}</span></div>` : '';
+    setHtml($('side'), `
+      ${s?.task ? `<div><h3>Tâche</h3><div class="task" style="-webkit-line-clamp: 8">${esc(s.task)}</div></div>` : ''}
+      ${scopeBox}
+      <div><h3>${SCOPE_TITLE[scopeKind(since)]}</h3>${sum}</div>`);
+    $('file-filter').hidden = shown.length < 2;
+    setHtml($('file-tree'), fileTree(shown));
+  }
+
+  const SCOPE_TITLE = { work: 'Fichiers modifiés', branch: 'Modifiés par le ticket', commit: 'Modifiés par ce commit', checkpoint: 'Modifiés depuis ce point' };
+  const isCheckpoint = (range) => /^[0-9a-f]{40}$/.test(range || '');
+  const scopeKind = (range) => (!range ? 'work' : range === 'branch' ? 'branch' : range.startsWith('commit:') ? 'commit' : 'checkpoint');
+  const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
+
+  function setHtml(el, html) {
+    if (el.dataset.html === html) return;
+    el.dataset.html = html;
+    el.innerHTML = html;
+  }
+
+  function shownFiles() {
+    const wt = currentWt();
+    if (!wt) return [];
+    return since ? sinceFiles || [] : wt.files;
+  }
+
+  function groupedFiles() {
+    const needle = fileFilter.toLowerCase();
+    const groups = new Map();
+    for (const f of shownFiles()) {
+      if (needle && !f.path.toLowerCase().includes(needle)) continue;
+      const dir = dirOf(f.path);
+      if (!groups.has(dir)) groups.set(dir, []);
+      groups.get(dir).push(f);
+    }
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([dir, list]) => [dir, list.sort((a, b) => a.path.localeCompare(b.path))]);
+  }
+
+  const orderedFiles = () => groupedFiles().flatMap(([, list]) => list.map((f) => f.path));
+
+  function fileTree(shown) {
+    if (!shown.length) return `<div class="tl"><span></span><span class="what">${since && !sinceFiles ? 'Chargement…' : 'Aucun changement'}</span></div>`;
+    const groups = groupedFiles();
+    if (!groups.length) return '<div class="tl"><span></span><span class="what">Aucun fichier ne correspond</span></div>';
+    const fileRow = (f, nested) => {
       const code = f.code === '??' ? 'U' : f.code.length > 1 ? f.code.charAt(1) : f.code;
       const stat = f.added || f.deleted ? `<span class="fstat"><span class="plus">+${f.added || 0}</span> <span class="minus">−${f.deleted || 0}</span></span>` : '';
-      return `<div class="file ${selectedFile === f.path ? 'active' : ''}" data-file="${esc(f.path)}"><span class="code ${code}">${code}</span><span class="fpath">&lrm;${esc(f.path)}</span>${stat}</div>`;
-    }).join('') || `<div class="tl"><span></span><span class="what">${since && !sinceFiles ? 'Chargement…' : 'Aucun changement'}</span></div>`;
-    const checkpoints = [...(s?.checkpoints || [])].reverse();
-    const sinceBox = checkpoints.length ? `<div class="since-box"><h3>Comparer à</h3>
-        <select id="since-select" aria-label="Point de comparaison">
-          <option value="">Dernier commit (HEAD)</option>
-          ${checkpoints.map((c, i) => `<option value="${esc(c.sha)}" ${since === c.sha ? 'selected' : ''}>Avant le tour ${checkpoints.length - i} · ${new Date(c.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${esc(String(c.prompt || '').slice(0, 50))}</option>`).join('')}
-        </select>
-        ${since ? '<button class="btn danger" id="restore-btn" title="Remet les fichiers suivis dans leur état d\'avant ce tour">Restaurer ce point</button>' : ''}
-      </div>` : '';
-    $('side').innerHTML = `
-      ${s?.task ? `<div><h3>Tâche</h3><div class="task" style="-webkit-line-clamp: 8">${esc(s.task)}</div></div>` : ''}
-      ${sinceBox}
-      <div><h3>${since ? 'Modifiés depuis ce point' : 'Fichiers modifiés'}</h3>${files}</div>`;
+      const name = nested ? f.path.slice(f.path.lastIndexOf('/') + 1) : f.path;
+      return `<div class="file ${nested ? 'nested' : ''} ${selectedFile === f.path ? 'active' : ''}" data-file="${esc(f.path)}" title="${esc(f.path)}"><span class="code ${code}">${code}</span><span class="fpath">&lrm;${esc(name)}</span>${stat}</div>`;
+    };
+    return groups.map(([dir, list]) => {
+      if (!dir) return list.map((f) => fileRow(f, false)).join('');
+      const closed = collapsedDirs.has(dir) && !fileFilter;
+      return `<button class="dir" data-dir="${esc(dir)}" title="${esc(dir)}"><span class="caret">${closed ? '▸' : '▾'}</span><span class="dpath">&lrm;${esc(dir)}/&lrm;</span><span>${list.length}</span></button>${closed ? '' : list.map((f) => fileRow(f, true)).join('')}`;
+    }).join('');
+  }
+
+  function stepFile(delta) {
+    const files = orderedFiles();
+    if (!files.length) return;
+    const index = files.indexOf(selectedFile);
+    const next = files[index < 0 ? 0 : Math.max(0, Math.min(files.length - 1, index + delta))];
+    if (next === selectedFile) return;
+    selectedFile = next;
+    collapsedDirs.delete(dirOf(next));
+    renderPanel();
+    loadDiff();
+    document.querySelector('#file-tree .file.active')?.scrollIntoView({ block: 'nearest' });
+  }
+
+  async function openChanges() {
+    const wt = currentWt();
+    if (!wt) return;
+    if (ticket?.path !== wt.path) {
+      const res = isBase(wt) ? null : await api(`/api/commits?wt=${encodeURIComponent(wt.path)}`).catch(() => null);
+      const data = res?.ok ? await res.json() : null;
+      if (currentWt()?.path !== wt.path) return;
+      ticket = { path: wt.path, base: data?.base || state.baseBranch, commits: data?.commits || [] };
+      if (since === null && ticket.commits.length) { since = 'branch'; selectedFile = null; }
+    }
+    loadSince();
   }
 
   async function loadSince() {
     sinceFiles = null;
     renderPanel();
-    if (!since) { loadDiff(); return; }
-    const res = await api(`/api/changes?wt=${encodeURIComponent(selected)}&since=${since}`).catch(() => null);
-    sinceFiles = res?.ok ? await res.json() : [];
+    if (since) {
+      const path = selected;
+      const range = since;
+      const res = await api(`/api/changes?wt=${encodeURIComponent(path)}&since=${encodeURIComponent(range)}`).catch(() => null);
+      if (selected !== path || since !== range) return;
+      sinceFiles = res?.ok ? await res.json() : [];
+    }
+    if (!selectedFile || !shownFiles().some((f) => f.path === selectedFile)) selectedFile = orderedFiles()[0] || null;
     renderPanel();
     loadDiff();
+  }
+
+  let sinceRefreshedAt = 0;
+
+  async function refreshSinceFiles() {
+    if (!since || tab !== 'changes' || Date.now() - sinceRefreshedAt < 10000) return;
+    sinceRefreshedAt = Date.now();
+    const path = selected;
+    const range = since;
+    const res = await api(`/api/changes?wt=${encodeURIComponent(path)}&since=${encodeURIComponent(range)}`).catch(() => null);
+    if (!res?.ok || selected !== path || since !== range) return;
+    sinceFiles = await res.json();
+    renderPanel();
   }
 
   let reportSignature = null;
@@ -1806,9 +1925,13 @@
   async function loadDiff() {
     const box = $('diff');
     if (!selectedFile) { box.innerHTML = '<div class="placeholder">Choisis un fichier pour voir son diff</div>'; return; }
-    const res = await api(`/api/diff?wt=${encodeURIComponent(selected)}&file=${encodeURIComponent(selectedFile)}${since ? `&since=${since}` : ''}`);
-    lastDiffText = await res.text();
+    const file = selectedFile;
+    const res = await api(`/api/diff?wt=${encodeURIComponent(selected)}&file=${encodeURIComponent(file)}${since ? `&since=${encodeURIComponent(since)}` : ''}`);
+    const text = await res.text();
+    if (file !== selectedFile) return;
+    lastDiffText = text;
     renderDiff();
+    $('diff').scrollTop = 0;
   }
 
   const commentsFor = (wtPath) => reviewComments.get(wtPath) || [];
@@ -1817,10 +1940,12 @@
     const box = $('diff');
     const comments = commentsFor(selected);
     let newLine = 0;
+    const single = (lastDiffText.match(/^diff /gm) || []).length <= 1;
     const lines = lastDiffText.split('\n').map((l) => {
       const hunk = l.match(/^@@ -\d+(?:,\d+)? \+(\d+)/);
       if (hunk) newLine = Number(hunk[1]);
-      const meta = /^(diff |index |--- |\+\+\+ |new file|deleted file)/.test(l);
+      if (/^(index |--- |\+\+\+ )/.test(l) || (single && l.startsWith('diff '))) return '';
+      const meta = /^(diff |new file|deleted file)/.test(l);
       const cls = hunk ? 'hunk' : meta ? 'meta-line' : l.startsWith('+') ? 'add' : l.startsWith('-') ? 'del' : '';
       let ln = null;
       if (!hunk && !meta && newLine && (l.startsWith('+') || l.startsWith(' '))) ln = newLine++;
@@ -1829,7 +1954,17 @@
       return `<div class="line ${cls}" ${ln ? `data-ln="${ln}"` : ''}>${ln ? `<button class="cm-add" data-comment="${ln}" title="Commenter la ligne ${ln}">+</button>` : ''}${esc(l) || ' '}</div>${notes}${editor}`;
     }).join('');
     const bar = comments.length ? `<div class="review-bar">💬 ${comments.length} commentaire${comments.length > 1 ? 's' : ''} en attente<button class="btn primary" id="cm-send">Envoyer à Claude</button><button class="btn" id="cm-clear">Vider</button></div>` : '';
-    box.innerHTML = bar + (lines || '<div class="placeholder">Pas de diff</div>');
+    const files = orderedFiles();
+    const pos = files.indexOf(selectedFile);
+    const head = `<div class="diff-head">
+      <button class="btn" data-step="-1" title="Fichier précédent (k)" ${pos <= 0 ? 'disabled' : ''}>‹</button>
+      <span class="pos">${pos + 1} / ${files.length}</span>
+      <button class="btn" data-step="1" title="Fichier suivant (j)" ${pos < 0 || pos >= files.length - 1 ? 'disabled' : ''}>›</button>
+      <span class="dpath" title="${esc(selectedFile)}">&lrm;${esc(selectedFile)}</span>
+      <button class="btn" data-copy-path title="Copier le chemin du fichier">Copier le chemin</button>
+      <button class="btn" data-wide title="${changesWide ? 'Revenir à la largeur normale' : 'Afficher le panneau en plein écran'}">${changesWide ? 'Réduire' : 'Agrandir'}</button>
+    </div>`;
+    box.innerHTML = head + bar + (lines || '<div class="placeholder">Pas de diff</div>');
     if (editLine) $('cm-text')?.focus();
   }
 
@@ -1885,18 +2020,19 @@
     if (selected === USAGE) loadUsage();
     if (currentWt() && tab === 'chat') loadChat(false);
     if (currentWt() && tab === 'checks' && Date.now() - checksLoadedAt > 20000) loadChecks();
+    if (currentWt()) refreshSinceFiles();
   }
 
   function select(target) {
     selected = target; selectedFile = null; chatSession = null; chatSignature = null; chatBarSignature = null; reportSignature = null;
-    since = null; sinceFiles = null; lastDiffText = ''; checksLoadedAt = 0;
+    since = null; sinceFiles = null; lastDiffText = ''; checksLoadedAt = 0; ticket = null; fileFilter = ''; collapsedDirs.clear(); $('file-filter').value = '';
     if (target === SHELL && tab !== 'app') tab = 'term';
     if (target === USAGE) tab = 'usage';
     if (currentWt()?.review?.report) tab = 'report';
     renderGrid(); renderPanel();
     if (tab === 'app') loadScreen();
     if (target === USAGE) loadUsage();
-    else if (target !== SHELL) { loadDiff(); if (tab === 'chat') loadChat(true); if (tab === 'checks') loadChecks(); }
+    else if (target !== SHELL) { loadDiff(); if (tab === 'chat') loadChat(true); if (tab === 'checks') loadChecks(); if (tab === 'changes') openChanges(); }
     if (tab === 'term') { loadScreen(); $('screen').focus(); }
   }
 
@@ -2049,6 +2185,7 @@
       if (tab === 'chat') loadChat(true);
       if (tab === 'term') { loadScreen(); $('screen').focus(); }
       if (tab === 'app') loadScreen();
+      if (tab === 'changes') openChanges();
       return;
     }
     const goto = e.target.closest('[data-goto]');
@@ -2056,7 +2193,13 @@
     const keyBtn = e.target.closest('[data-key]');
     if (keyBtn) { sendKey(keyBtn.dataset.key); return; }
     const f = e.target.closest('.file[data-file]');
-    if (f) { selectedFile = f.dataset.file; renderPanel(); loadDiff(); }
+    if (f) { selectedFile = f.dataset.file; renderPanel(); loadDiff(); return; }
+    const dir = e.target.closest('[data-dir]');
+    if (dir) { collapsedDirs.has(dir.dataset.dir) ? collapsedDirs.delete(dir.dataset.dir) : collapsedDirs.add(dir.dataset.dir); renderPanel(); return; }
+    const step = e.target.closest('[data-step]');
+    if (step) { stepFile(Number(step.dataset.step)); return; }
+    if (e.target.closest('[data-copy-path]')) { navigator.clipboard?.writeText(selectedFile).then(() => toast('Chemin copié.'), () => toast('Copie impossible.', 'error')); return; }
+    if (e.target.closest('[data-wide]')) { changesWide = !changesWide; localSet('changesWide', changesWide ? '1' : '0'); renderTabs(); renderDiff(); }
   });
 
   const SOURCE_LABEL = { project: 'projet', user: 'perso', synced: 'claude.ai', plugin: 'plugin', builtin: 'intégrée' };
@@ -2595,7 +2738,7 @@
     const dequeueBtn = t.closest('[data-dequeue]');
     if (dequeueBtn) { await post('/api/queue/remove', { target: chatSession, id: dequeueBtn.dataset.dequeue }); refresh(); return; }
     const sinceLink = t.closest('[data-since]');
-    if (sinceLink) { since = sinceLink.dataset.since; selectedFile = null; tab = 'changes'; renderTabs(); loadSince(); return; }
+    if (sinceLink) { since = sinceLink.dataset.since; selectedFile = null; tab = 'changes'; renderTabs(); openChanges(); return; }
     if (t.id === 'restore-btn') {
       if (!confirm('Restaurer les fichiers suivis du worktree dans leur état d’avant ce tour ?\n\nLes modifications faites depuis sur ces fichiers sont perdues. Les nouveaux fichiers non suivis restent en place.')) return;
       const result = await post('/api/restore', { path: selected, sha: since });
@@ -2629,9 +2772,17 @@
     const showDiff = t.closest('[data-showdiff]');
     if (showDiff) {
       const b = reportBlocks[Number(showDiff.dataset.showdiff)];
-      const match = currentWt()?.files.find((f) => f.path === b.file || b.file.endsWith(`/${f.path}`) || f.path.endsWith(`/${b.file}`));
-      if (!match) { toast('Ce fichier n’a pas de changement local dans ce worktree.', 'error'); return; }
-      since = null; selectedFile = match.path; tab = 'changes'; renderTabs(); renderPanel();
+      const matchIn = (list) => list.find((f) => f.path === b.file || b.file.endsWith(`/${f.path}`) || f.path.endsWith(`/${b.file}`));
+      const local = matchIn(currentWt()?.files || []);
+      let match = local;
+      if (!local) {
+        const res = await api(`/api/changes?wt=${encodeURIComponent(selected)}&since=branch`).catch(() => null);
+        const branchFiles = res?.ok ? await res.json() : [];
+        match = matchIn(branchFiles);
+        if (!match) { toast('Ce fichier n’a pas de changement dans ce ticket.', 'error'); return; }
+        sinceFiles = branchFiles;
+      }
+      since = local ? null : 'branch'; selectedFile = match.path; tab = 'changes'; renderTabs(); renderPanel();
       await loadDiff();
       document.querySelector(`#diff .line[data-ln="${Number(b.line)}"]`)?.scrollIntoView({ block: 'center' });
       return;
@@ -2655,8 +2806,12 @@
   $('panel').addEventListener('change', (e) => {
     if (e.target.id !== 'since-select') return;
     since = e.target.value || null;
-    selectedFile = null;
     loadSince();
+  });
+
+  $('file-filter').addEventListener('input', (e) => {
+    fileFilter = e.target.value.trim();
+    renderPanel();
   });
 
   $('panel').addEventListener('click', (e) => {
@@ -2808,6 +2963,7 @@
     const el = document.activeElement;
     if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]') || el === $('screen') || el?.closest?.('input, textarea, select, [contenteditable]')) return;
     const panelOpen = $('panel').classList.contains('open');
+    if ((e.key === 'j' || e.key === 'k') && panelOpen && tab === 'changes') { e.preventDefault(); stepFile(e.key === 'j' ? 1 : -1); return; }
     if (e.key === 'j' || e.key === 'k') { e.preventDefault(); moveFocus(e.key === 'j' ? 1 : -1); return; }
     if (e.key === 'Enter' && focusedCard()) { e.preventDefault(); focusedCard().click(); return; }
     if (e.key === ' ' && focusedCard()) {

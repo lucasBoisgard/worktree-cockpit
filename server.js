@@ -402,24 +402,72 @@ async function snapshot() {
 
 const validSha = (sha) => /^[0-9a-f]{40}$/.test(String(sha || ''));
 
+const COMMITS_MAX = 200;
+
+async function ticketBase(wt) {
+  const pr = wt.branch && prCache.get(wt.branch)?.pr;
+  const refs = [...new Set([pr?.base, BASE_BRANCH].filter(Boolean))].flatMap((b) => [`origin/${b}`, b]);
+  for (const ref of refs) {
+    const sha = ((await git(wt.path, ['merge-base', 'HEAD', ref])) || '').trim();
+    if (validSha(sha)) return { ref, sha };
+  }
+  return null;
+}
+
+async function rangeArgs(wt, range) {
+  if (validSha(range)) return [range];
+  if (range === 'branch') {
+    const base = await ticketBase(wt);
+    return base ? [base.sha] : null;
+  }
+  const commit = String(range).match(/^commit:([0-9a-f]{40})$/);
+  return commit ? [`${commit[1]}^!`] : null;
+}
+
+const findWorktree = async (wtPath) => (await listWorktrees()).find((wt) => wt.path === wtPath) || null;
+
 async function changesSince(wtPath, since) {
-  if (!validSha(since) || !(await listWorktrees()).some((wt) => wt.path === wtPath)) return null;
-  const [numstat, names] = await Promise.all([git(wtPath, ['diff', '--numstat', since]), git(wtPath, ['diff', '--name-status', since])]);
+  const wt = await findWorktree(wtPath);
+  const args = wt && (await rangeArgs(wt, since));
+  if (!args) return null;
+  const [numstat, names, untracked] = await Promise.all([
+    git(wtPath, ['diff', '--numstat', ...args]),
+    git(wtPath, ['diff', '--name-status', ...args]),
+    since === 'branch' ? git(wtPath, ['ls-files', '--others', '--exclude-standard']) : '',
+  ]);
   if (numstat === null) return null;
   const stats = parseNumstat(numstat);
-  return (names || '').split('\n').filter(Boolean).map((line) => {
+  const files = (names || '').split('\n').filter(Boolean).map((line) => {
     const [code, ...rest] = line.split('\t');
     const file = rest[rest.length - 1];
     return { code: code.charAt(0), path: file, ...(stats[file] || {}) };
   });
+  return [...files, ...(untracked || '').split('\n').filter(Boolean).map((file) => ({ code: '??', path: file }))];
+}
+
+async function ticketCommits(wtPath) {
+  const wt = await findWorktree(wtPath);
+  const base = wt && (await ticketBase(wt));
+  if (!base) return null;
+  const log = (await git(wtPath, ['log', '--no-merges', `--max-count=${COMMITS_MAX}`, '--format=%H%x1f%ct%x1f%s', `${base.sha}..HEAD`])) || '';
+  const commits = log.split('\n').filter(Boolean).map((line) => {
+    const [sha, at, subject] = line.split('\x1f');
+    return { sha, at: Number(at) * 1000, subject };
+  });
+  return { base: base.ref.replace(/^origin\//, ''), commits };
 }
 
 async function diff(wtPath, file, since) {
-  const worktrees = await listWorktrees();
-  if (!worktrees.some((wt) => wt.path === wtPath)) return null;
+  const wt = await findWorktree(wtPath);
+  if (!wt) return null;
   const full = path.resolve(wtPath, file);
   if (!full.startsWith(`${wtPath}/`)) return null;
-  if (since) return validSha(since) ? (await git(wtPath, ['diff', since, '--', file])) || '' : null;
+  if (since) {
+    const args = await rangeArgs(wt, since);
+    if (!args) return null;
+    const out = (await git(wtPath, ['diff', ...args, '--', file])) || '';
+    if (out || since !== 'branch') return out;
+  }
   const tracked = await git(wtPath, ['ls-files', '--error-unmatch', '--', file]);
   if (tracked !== null) return (await git(wtPath, ['diff', '--', file])) || '';
   const untracked = fs.statSync(full, { throwIfNoEntry: false })?.isDirectory()
@@ -1017,6 +1065,7 @@ function summarizePr(raw) {
     url: raw.url,
     title: raw.title,
     state: raw.state,
+    base: raw.baseRefName || null,
     draft: !!raw.isDraft,
     review: raw.reviewDecision || null,
     mergeState: raw.mergeStateStatus || null,
@@ -1027,7 +1076,7 @@ function summarizePr(raw) {
   };
 }
 
-const PR_FIELDS = 'number,url,title,state,isDraft,reviewDecision,mergeStateStatus,statusCheckRollup';
+const PR_FIELDS = 'number,url,title,state,isDraft,reviewDecision,mergeStateStatus,statusCheckRollup,baseRefName';
 
 async function refreshPrs(worktrees) {
   if (!ghAvailable) return;
@@ -1741,6 +1790,10 @@ http
       if (url.pathname === '/api/changes') {
         const list = await changesSince(url.searchParams.get('wt') || '', url.searchParams.get('since') || '');
         return list === null ? json(res, 400, { error: 'Checkpoint ou worktree invalide.' }) : json(res, 200, list);
+      }
+      if (url.pathname === '/api/commits') {
+        const result = await ticketCommits(url.searchParams.get('wt') || '');
+        return result === null ? json(res, 400, { error: 'Base de la branche introuvable.' }) : json(res, 200, result);
       }
       if (url.pathname === '/api/checks') {
         const details = await prDetails(url.searchParams.get('wt') || '');
