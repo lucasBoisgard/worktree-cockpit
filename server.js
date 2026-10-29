@@ -227,7 +227,7 @@ async function livePanes() {
     const [id, session, dead, created] = line.split('\t');
     if (id && dead !== '1') panes.set(id, { session, created: Number(created) * 1000 });
   }
-  panes.bySession = claudePanes(panes);
+  Object.assign(panes, claudePanes(panes));
   return panes;
 }
 
@@ -242,6 +242,7 @@ function processAlive(pid) {
 
 function claudePanes(panes) {
   const bySession = new Map();
+  const claudeStatus = new Map();
   let files = [];
   try {
     files = fs.readdirSync(CLAUDE_SESSIONS_DIR).filter((f) => f.endsWith('.json'));
@@ -250,10 +251,17 @@ function claudePanes(panes) {
     try {
       const entry = JSON.parse(fs.readFileSync(path.join(CLAUDE_SESSIONS_DIR, file), 'utf8'));
       const pane = /(%\d+)$/.exec(entry.tmux || '')?.[1];
-      if (entry.sessionId && pane && panes.has(pane) && processAlive(entry.pid)) bySession.set(entry.sessionId, pane);
+      if (!entry.sessionId || !processAlive(entry.pid)) continue;
+      if (pane && panes.has(pane)) bySession.set(entry.sessionId, pane);
+      claudeStatus.set(entry.sessionId, { status: entry.status, at: entry.statusUpdatedAt || 0 });
     } catch {}
   }
-  return bySession;
+  return { bySession, claudeStatus };
+}
+
+function withClaudeStatus(session, panes) {
+  const claude = panes.claudeStatus?.get(session.sessionId);
+  return session.status === 'working' && claude?.status === 'idle' && claude.at > session.updatedAt ? { ...session, status: 'idle' } : session;
 }
 
 function paneOf(session, panes) {
@@ -353,7 +361,7 @@ async function snapshot() {
   const usageBySession = new Map(snapshots.map((u) => [u.sessionId, u]));
   const queues = loadStore('worktree-queue.json', {});
   const links = loadStore('worktree-links.json', {});
-  for (const session of readSessions()) {
+  for (const session of readSessions().map((s) => withClaudeStatus(s, panes))) {
     const owner = fs.existsSync(session.cwd) && ownerOf(session.cwd, worktrees);
     if (!owner) continue;
     const live = !!paneOf(session, panes);
@@ -1102,9 +1110,11 @@ function dequeue(sessionId, id) {
 }
 
 async function deliver(sessionId, text, queueWhenWaiting = false) {
-  const session = readSession(String(sessionId || ''));
-  if (!session) return 'unknown';
-  if (!paneOf(session, await livePanes())) return 'offline';
+  const panes = await livePanes();
+  const raw = readSession(String(sessionId || ''));
+  if (!raw) return 'unknown';
+  if (!paneOf(raw, panes)) return 'offline';
+  const session = withClaudeStatus(raw, panes);
   const busy = session.status === 'working' || (queueWhenWaiting && session.status === 'needs_input');
   if (busy && Date.now() - session.updatedAt < STALE_MS_SERVER) {
     enqueue(session.sessionId, text);

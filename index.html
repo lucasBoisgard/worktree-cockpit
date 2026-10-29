@@ -555,7 +555,7 @@
   <div class="view" id="term-view" hidden>
     <pre class="screen" id="screen" tabindex="0"></pre>
     <div class="term-bar">
-      <button class="btn" data-key="Escape">Échap</button>
+      <button class="btn" data-key="Escape" title="Envoie Échap à la session : interrompt Claude">Interrompre</button>
       <button class="btn" data-key="C-c">Ctrl+C</button>
       <button class="btn" data-key="BTab">Maj+Tab</button>
       <button class="btn" data-key="Up">↑</button>
@@ -762,7 +762,7 @@
       <kbd>n</kbd><span>Nouvelle session</span>
       <kbd>H</kbd><span>Historique</span>
       <kbd>i</kbd><span>Notifications</span>
-      <kbd>Échap</kbd><span>Fermer le panneau</span>
+      <kbd>Échap</kbd><span>Fermer le panneau, même depuis le Terminal : pour interrompre Claude, bouton « Interrompre »</span>
       <kbd>?</kbd><span>Cette aide</span>
     </div>
     <div class="buttons"><button class="btn" data-dismiss>Fermer</button></div>
@@ -1935,7 +1935,8 @@
     if (!text || !chatSession) return;
     hideSuggest();
     $('composer-send').disabled = true;
-    const queue = currentSession()?.status === 'working';
+    const s = currentSession();
+    const queue = s?.status === 'working' && Date.now() - s.updatedAt < STALE_MS;
     const result = await post(queue ? '/api/queue' : '/api/send', { target: chatSession, text });
     $('composer-send').disabled = false;
     if (!result.ok) { toast(result.data.error || 'Envoi impossible.', 'error'); return; }
@@ -2136,7 +2137,7 @@
   });
 
   $('screen').addEventListener('keydown', (e) => {
-    if (e.metaKey) return;
+    if (e.metaKey || e.key === 'Escape') return;
     let op = null;
     if (e.ctrlKey && /^[a-z]$/i.test(e.key)) op = { key: `C-${e.key.toLowerCase()}` };
     else if (e.key === 'Tab' && e.shiftKey) op = { key: 'BTab' };
@@ -2246,7 +2247,7 @@
 
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || !selected) return;
-    if (document.activeElement === $('screen') || document.querySelector('dialog[open]')) return;
+    if (document.querySelector('dialog[open]')) return;
     closePanel();
   });
 
