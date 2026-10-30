@@ -422,10 +422,17 @@ async function ticketBase(wt) {
   return null;
 }
 
+async function prBase(wt) {
+  const pr = wt.branch && prCache.get(wt.branch)?.pr;
+  if (!pr || pr.state !== 'OPEN') return null;
+  const sha = ((await git(wt.path, ['merge-base', 'HEAD', `origin/${wt.branch}`])) || '').trim();
+  return validSha(sha) ? { number: pr.number, branch: wt.branch, sha } : null;
+}
+
 async function rangeArgs(wt, range) {
   if (validSha(range)) return [range];
-  if (range === 'branch') {
-    const base = await ticketBase(wt);
+  if (range === 'branch' || range === 'pr') {
+    const base = range === 'pr' ? await prBase(wt) : await ticketBase(wt);
     return base ? [base.sha] : null;
   }
   const commit = String(range).match(/^commit:([0-9a-f]{40})$/);
@@ -441,7 +448,7 @@ async function changesSince(wtPath, since) {
   const [numstat, names, untracked] = await Promise.all([
     git(wtPath, ['diff', '--numstat', ...args]),
     git(wtPath, ['diff', '--name-status', ...args]),
-    since === 'branch' ? git(wtPath, ['ls-files', '--others', '--exclude-standard']) : '',
+    since === 'branch' || since === 'pr' ? git(wtPath, ['ls-files', '--others', '--exclude-standard']) : '',
   ]);
   if (numstat === null) return null;
   const stats = parseNumstat(numstat);
@@ -455,14 +462,14 @@ async function changesSince(wtPath, since) {
 
 async function ticketCommits(wtPath) {
   const wt = await findWorktree(wtPath);
-  const base = wt && (await ticketBase(wt));
+  const [base, pr] = wt ? await Promise.all([ticketBase(wt), prBase(wt)]) : [];
   if (!base) return null;
   const log = (await git(wtPath, ['log', '--no-merges', `--max-count=${COMMITS_MAX}`, '--format=%H%x1f%ct%x1f%s', `${base.sha}..HEAD`])) || '';
   const commits = log.split('\n').filter(Boolean).map((line) => {
     const [sha, at, subject] = line.split('\x1f');
     return { sha, at: Number(at) * 1000, subject };
   });
-  return { base: base.ref.replace(/^origin\//, ''), commits };
+  return { base: base.ref.replace(/^origin\//, ''), commits, pr: pr && { number: pr.number, branch: pr.branch } };
 }
 
 async function diff(wtPath, file, since) {
@@ -474,7 +481,7 @@ async function diff(wtPath, file, since) {
     const args = await rangeArgs(wt, since);
     if (!args) return null;
     const out = (await git(wtPath, ['diff', ...args, '--', file])) || '';
-    if (out || since !== 'branch') return out;
+    if (out || (since !== 'branch' && since !== 'pr')) return out;
   }
   const tracked = await git(wtPath, ['ls-files', '--error-unmatch', '--', file]);
   if (tracked !== null) return (await git(wtPath, ['diff', '--', file])) || '';

@@ -943,6 +943,7 @@
   let inboxEvents = [];
   let since = null;
   let sinceFiles = null;
+  let autoScope = false;
   let ticket = null;
   let fileFilter = '';
   let changesWide = localGet('changesWide') === '1';
@@ -1798,9 +1799,11 @@
     const shown = shownFiles();
     const checkpoints = [...(s?.checkpoints || [])].reverse();
     const commits = ticket?.path === wt.path ? ticket.commits : [];
+    const pr = ticket?.path === wt.path ? ticket.pr : null;
     const option = (value, label) => `<option value="${esc(value)}" ${(since || '') === value ? 'selected' : ''}>${esc(label)}</option>`;
-    const scopeBox = commits.length || checkpoints.length ? `<div class="since-box"><h3>Périmètre</h3>
+    const scopeBox = commits.length || checkpoints.length || pr ? `<div class="since-box"><h3>Périmètre</h3>
         <select id="since-select" aria-label="Périmètre des changements">
+          ${pr ? option('pr', `Depuis la PR #${pr.number} · pas encore poussé sur ${pr.branch}`) : ''}
           ${commits.length ? option('branch', `Tout le ticket · ${commits.length} commit${commits.length > 1 ? 's' : ''} depuis ${ticket.base}`) : ''}
           ${option('', 'Non commité')}
           ${commits.length ? `<optgroup label="Un commit">${commits.map((c) => option(`commit:${c.sha}`, `${c.sha.slice(0, 7)} · ${String(c.subject).slice(0, 70)}`)).join('')}</optgroup>` : ''}
@@ -1819,9 +1822,9 @@
     setHtml($('file-tree'), fileTree(shown));
   }
 
-  const SCOPE_TITLE = { work: 'Fichiers modifiés', branch: 'Modifiés par le ticket', commit: 'Modifiés par ce commit', checkpoint: 'Modifiés depuis ce point' };
+  const SCOPE_TITLE = { work: 'Fichiers modifiés', pr: 'Modifiés depuis la PR', branch: 'Modifiés par le ticket', commit: 'Modifiés par ce commit', checkpoint: 'Modifiés depuis ce point' };
   const isCheckpoint = (range) => /^[0-9a-f]{40}$/.test(range || '');
-  const scopeKind = (range) => (!range ? 'work' : range === 'branch' ? 'branch' : range.startsWith('commit:') ? 'commit' : 'checkpoint');
+  const scopeKind = (range) => (!range ? 'work' : range === 'branch' || range === 'pr' ? range : range.startsWith('commit:') ? 'commit' : 'checkpoint');
   const dirOf = (file) => (file.includes('/') ? file.slice(0, file.lastIndexOf('/')) : '');
 
   function setHtml(el, html) {
@@ -1887,8 +1890,8 @@
       const res = isBase(wt) ? null : await api(`/api/commits?wt=${encodeURIComponent(wt.path)}`).catch(() => null);
       const data = res?.ok ? await res.json() : null;
       if (currentWt()?.path !== wt.path) return;
-      ticket = { path: wt.path, base: data?.base || state.baseBranch, commits: data?.commits || [] };
-      if (since === null && ticket.commits.length) { since = 'branch'; selectedFile = null; }
+      ticket = { path: wt.path, base: data?.base || state.baseBranch, commits: data?.commits || [], pr: data?.pr || null };
+      if (since === null && (ticket.pr || ticket.commits.length)) { since = ticket.pr ? 'pr' : 'branch'; autoScope = true; selectedFile = null; }
     }
     loadSince();
   }
@@ -1902,6 +1905,7 @@
       const res = await api(`/api/changes?wt=${encodeURIComponent(path)}&since=${encodeURIComponent(range)}`).catch(() => null);
       if (selected !== path || since !== range) return;
       sinceFiles = res?.ok ? await res.json() : [];
+      if (range === 'pr' && autoScope && !sinceFiles.length && ticket?.commits.length) { autoScope = false; since = 'branch'; return loadSince(); }
     }
     if (!selectedFile || !shownFiles().some((f) => f.path === selectedFile)) selectedFile = orderedFiles()[0] || null;
     renderPanel();
@@ -2264,7 +2268,7 @@
 
   function select(target) {
     selected = target; selectedFile = null; chatSession = null; chatSignature = null; chatBarSignature = null; reportSignature = null;
-    since = null; sinceFiles = null; lastDiffText = ''; checksLoadedAt = 0; ticket = null; fileFilter = ''; collapsedDirs.clear(); $('file-filter').value = '';
+    since = null; sinceFiles = null; autoScope = false; lastDiffText = ''; checksLoadedAt = 0; ticket = null; fileFilter = ''; collapsedDirs.clear(); $('file-filter').value = '';
     if (target === SHELL && tab !== 'app') tab = 'term';
     if (target === USAGE) tab = 'usage';
     if (currentWt()?.review?.report) tab = 'report';
@@ -3067,6 +3071,7 @@
   $('panel').addEventListener('change', (e) => {
     if (e.target.id !== 'since-select') return;
     since = e.target.value || null;
+    autoScope = false;
     loadSince();
   });
 
