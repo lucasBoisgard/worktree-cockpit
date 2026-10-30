@@ -58,6 +58,9 @@ const USE_PM2 = APP?.processManager === 'pm2';
 const PM2_BIN = APP?.pm2Bin || (fs.existsSync(path.join(REPO, 'node_modules', '.bin', 'pm2')) ? path.join(REPO, 'node_modules', '.bin', 'pm2') : 'pm2');
 const PM2_PID_FILE = path.join(os.homedir(), '.pm2', 'pm2.pid');
 const CRASH_LOOP_UPTIME_MS = 15000;
+// Dev servers, watchers and services the app command starts, outlived by their pm2 daemon or an older run
+const APP_PROCESS_PATTERN = /node_modules\/\.bin\/(vite|storybook)\b|node_modules\/storybook\/|\bnx(\.js)? watch\b|--conditions=nodeDev\b/;
+const STRAY_KILL_GRACE_MS = 5000;
 const TOKEN_FILE = path.join(__dirname, 'token');
 const ALLOWED_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', process.env.MACHINE_HOSTNAME, ...(CONFIG.hosts || []), ...(process.env.COCKPIT_HOSTS || '').split(',')].map((h) => (h || '').trim().toLowerCase()).filter(Boolean));
 const TMUX_SIZE = ['-x', '200', '-y', '50'];
@@ -764,12 +767,124 @@ async function appState() {
   return { ...base, state: 'up', warnings };
 }
 
+function procRead(pid, file) {
+  try {
+    return fs.readFileSync(`/proc/${pid}/${file}`, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function procCwd(pid) {
+  try {
+    return fs.readlinkSync(`/proc/${pid}/cwd`);
+  } catch {
+    return null;
+  }
+}
+
+function listeningPortsBySocket() {
+  const ports = new Map();
+  for (const file of ['tcp', 'tcp6']) {
+    for (const line of (procRead('net', file) || '').split('\n').slice(1)) {
+      const cols = line.trim().split(/\s+/);
+      if (cols[3] === '0A') ports.set(cols[9], parseInt(cols[1].split(':')[1], 16));
+    }
+  }
+  return ports;
+}
+
+function processPorts(pid, listening) {
+  let fds = [];
+  try {
+    fds = fs.readdirSync(`/proc/${pid}/fd`);
+  } catch {
+    return [];
+  }
+  const ports = new Set();
+  for (const fd of fds) {
+    try {
+      const inode = /^socket:\[(\d+)\]$/.exec(fs.readlinkSync(`/proc/${pid}/fd/${fd}`))?.[1];
+      if (inode && listening.has(inode)) ports.add(listening.get(inode));
+    } catch {}
+  }
+  return [...ports];
+}
+
+// Claude sessions and their tools may run from the main checkout too: never touch them
+function underClaude(pid, cmdlines) {
+  for (let current = pid, depth = 0; current > 1 && depth < 50; depth++) {
+    if (/(^|\/)claude(\s|$)|\.claude\//.test(cmdlines.get(current) ?? '')) return true;
+    current = Number(/^\d+ \(.*\) \S (\d+)/s.exec(procRead(current, 'stat') || '')?.[1] || 0);
+  }
+  return false;
+}
+
+// Processes of the app still alive outside pm2: they keep their ports and push the next run onto other ones
+function strayAppProcesses() {
+  if (process.platform !== 'linux') return [];
+  const worktreesDir = path.join(REPO, '.claude', 'worktrees');
+  const listening = listeningPortsBySocket();
+  const pids = fs.readdirSync('/proc').filter((entry) => /^\d+$/.test(entry)).map(Number);
+  const cmdlines = new Map(pids.map((pid) => [pid, (procRead(pid, 'cmdline') || '').replace(/\0/g, ' ').trim()]));
+  const pm2Daemon = (() => {
+    try {
+      return Number(fs.readFileSync(PM2_PID_FILE, 'utf8').trim());
+    } catch {
+      return null;
+    }
+  })();
+  return pids.flatMap((pid) => {
+    if (pid === process.pid || pid === pm2Daemon) return [];
+    const cwd = procCwd(pid);
+    if (!cwd || !(cwd === REPO || cwd.startsWith(`${REPO}/`)) || cwd.startsWith(`${worktreesDir}/`)) return [];
+    const cmd = cmdlines.get(pid);
+    const ports = processPorts(pid, listening);
+    if (!ports.length && !APP_PROCESS_PATTERN.test(cmd)) return [];
+    if (underClaude(pid, cmdlines)) return [];
+    return [{ pid, ports, cmd: cmd.slice(0, 120) }];
+  });
+}
+
+async function killStrayAppProcesses() {
+  const strays = strayAppProcesses();
+  for (const { pid } of strays) {
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch {}
+  }
+  const deadline = Date.now() + STRAY_KILL_GRACE_MS;
+  let alive = strays;
+  while (alive.length && Date.now() < deadline) {
+    await sleep(250);
+    alive = alive.filter(({ pid }) => fs.existsSync(`/proc/${pid}`));
+  }
+  for (const { pid } of alive) {
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {}
+  }
+  await sleep(500);
+  return strayAppProcesses();
+}
+
+// Stops every process of the app, pm2-managed or not, so a new run gets its own ports back
+async function clearApp() {
+  await tmux(['kill-session', '-t', APP_SESSION]);
+  if (USE_PM2 && pm2DaemonAlive()) await run(PM2_BIN, ['delete', 'all']);
+  const survivors = await killStrayAppProcesses();
+  if (!survivors.length) return { ok: true };
+  const list = survivors.map(({ pid, ports, cmd }) => `${pid}${ports.length ? ` (port ${ports.join(', ')})` : ''} ${cmd}`).join(' · ');
+  return { error: `Process de l'app toujours vivants après SIGKILL : ${list}` };
+}
+
 async function startApp({ restart }) {
   const current = await appState();
   if (!current) return { error: "Aucune app configurée (app.command dans cockpit.config.json)." };
   if (current.state === 'building') return { error: 'Un build est déjà en cours.' };
   if (['up', 'degraded', 'starting'].includes(current.state) && !restart) return { error: "L'app tourne déjà." };
-  await tmux(['kill-session', '-t', APP_SESSION]);
+  const cleared = await clearApp();
+  if (cleared.error) return cleared;
   const result = await tmux([
     'new-session', '-d', '-s', APP_SESSION, ...TMUX_SIZE, '-c', REPO, '-e', TMUX_PATH,
     'bash', '-lc', USE_PM2 ? `"${PM2_BIN}" delete all >/dev/null 2>&1; ${APP.command}` : APP.command,
@@ -779,9 +894,7 @@ async function startApp({ restart }) {
 }
 
 async function stopApp() {
-  await tmux(['kill-session', '-t', APP_SESSION]);
-  if (USE_PM2 && pm2DaemonAlive()) await run(PM2_BIN, ['delete', 'all']);
-  return { ok: true };
+  return clearApp();
 }
 
 async function ensureShell() {
