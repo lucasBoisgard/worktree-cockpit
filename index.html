@@ -1907,7 +1907,6 @@
       const data = res?.ok ? await res.json() : null;
       if (currentWt()?.path !== wt.path) return;
       ticket = { path: wt.path, base: data?.base || state.baseBranch, commits: data?.commits || [], pr: data?.pr || null };
-      if (since === null && ticket.commits.length) { since = 'branch'; selectedFile = null; }
     }
     loadSince();
   }
