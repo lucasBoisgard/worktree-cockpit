@@ -943,7 +943,6 @@
   let inboxEvents = [];
   let since = null;
   let sinceFiles = null;
-  let autoScope = false;
   let ticket = null;
   let fileFilter = '';
   let changesWide = localGet('changesWide') === '1';
@@ -1820,8 +1819,8 @@
     const option = (value, label) => `<option value="${esc(value)}" ${(since || '') === value ? 'selected' : ''}>${esc(label)}</option>`;
     const scopeBox = commits.length || checkpoints.length || pr ? `<div class="since-box"><h3>Périmètre</h3>
         <select id="since-select" aria-label="Périmètre des changements">
-          ${pr ? option('pr', `Depuis la PR #${pr.number} · pas encore poussé sur ${pr.branch}`) : ''}
-          ${commits.length ? option('branch', `Tout le ticket · ${commits.length} commit${commits.length > 1 ? 's' : ''} depuis ${ticket.base}`) : ''}
+          ${commits.length ? option('branch', `${wt.pr?.state === 'OPEN' ? `PR #${wt.pr.number}` : 'Tout le ticket'} · ${commits.length} commit${commits.length > 1 ? 's' : ''} depuis ${ticket.base}`) : ''}
+          ${pr ? option('pr', `Pas encore poussé sur ${pr.branch}`) : ''}
           ${option('', 'Non commité')}
           ${commits.length ? `<optgroup label="Un commit">${commits.map((c) => option(`commit:${c.sha}`, `${c.sha.slice(0, 7)} · ${String(c.subject).slice(0, 70)}`)).join('')}</optgroup>` : ''}
           ${checkpoints.length ? `<optgroup label="Depuis un tour de Claude">${checkpoints.map((c, i) => option(c.sha, `Avant le tour ${checkpoints.length - i} · ${new Date(c.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${String(c.prompt || '').slice(0, 50)}`)).join('')}</optgroup>` : ''}
@@ -1904,11 +1903,11 @@
     const wt = currentWt();
     if (!wt) return;
     if (ticket?.path !== wt.path) {
-      const res = isBase(wt) ? null : await api(`/api/commits?wt=${encodeURIComponent(wt.path)}`).catch(() => null);
+      const res = !wt.branch || wt.branch === state.baseBranch ? null : await api(`/api/commits?wt=${encodeURIComponent(wt.path)}`).catch(() => null);
       const data = res?.ok ? await res.json() : null;
       if (currentWt()?.path !== wt.path) return;
       ticket = { path: wt.path, base: data?.base || state.baseBranch, commits: data?.commits || [], pr: data?.pr || null };
-      if (since === null && (ticket.pr || ticket.commits.length)) { since = ticket.pr ? 'pr' : 'branch'; autoScope = true; selectedFile = null; }
+      if (since === null && ticket.commits.length) { since = 'branch'; selectedFile = null; }
     }
     loadSince();
   }
@@ -1922,7 +1921,6 @@
       const res = await api(`/api/changes?wt=${encodeURIComponent(path)}&since=${encodeURIComponent(range)}`).catch(() => null);
       if (selected !== path || since !== range) return;
       sinceFiles = res?.ok ? await res.json() : [];
-      if (range === 'pr' && autoScope && !sinceFiles.length && ticket?.commits.length) { autoScope = false; since = 'branch'; return loadSince(); }
     }
     if (!selectedFile || !shownFiles().some((f) => f.path === selectedFile)) selectedFile = orderedFiles()[0] || null;
     renderPanel();
@@ -2285,7 +2283,7 @@
 
   function select(target) {
     selected = target; selectedFile = null; chatSession = null; chatSignature = null; chatBarSignature = null; reportSignature = null;
-    since = null; sinceFiles = null; autoScope = false; lastDiffText = ''; checksLoadedAt = 0; ticket = null; fileFilter = ''; collapsedDirs.clear(); $('file-filter').value = '';
+    since = null; sinceFiles = null; lastDiffText = ''; checksLoadedAt = 0; ticket = null; fileFilter = ''; collapsedDirs.clear(); $('file-filter').value = '';
     if (target === SHELL && tab !== 'app') tab = 'term';
     if (target === USAGE) tab = 'usage';
     if (currentWt()?.review?.report) tab = 'report';
@@ -3088,7 +3086,6 @@
   $('panel').addEventListener('change', (e) => {
     if (e.target.id !== 'since-select') return;
     since = e.target.value || null;
-    autoScope = false;
     loadSince();
   });
 

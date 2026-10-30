@@ -419,9 +419,20 @@ const validSha = (sha) => /^[0-9a-f]{40}$/.test(String(sha || ''));
 
 const COMMITS_MAX = 200;
 
+const baseFetchedAt = new Map();
+const BASE_FETCH_MS = 60000;
+
+async function fetchBase(wtPath, branch) {
+  if (Date.now() - (baseFetchedAt.get(branch) || 0) < BASE_FETCH_MS) return;
+  baseFetchedAt.set(branch, Date.now());
+  await run('git', ['-C', wtPath, 'fetch', '-q', 'origin', branch]);
+}
+
 async function ticketBase(wt) {
   const pr = wt.branch && prCache.get(wt.branch)?.pr;
-  const refs = [...new Set([pr?.base, BASE_BRANCH].filter(Boolean))].flatMap((b) => [`origin/${b}`, b]);
+  const bases = [...new Set([pr?.base, BASE_BRANCH].filter(Boolean))];
+  await fetchBase(wt.path, bases[0]);
+  const refs = bases.flatMap((b) => [`origin/${b}`, b]);
   for (const ref of refs) {
     const sha = ((await git(wt.path, ['merge-base', 'HEAD', ref])) || '').trim();
     if (validSha(sha)) return { ref, sha };
@@ -1261,13 +1272,20 @@ async function refreshPrs(worktrees) {
   if (!ghAvailable) return;
   prRefreshedAt = Date.now();
   for (const wt of worktrees) {
-    if (!wt.branch || wt.branch === BASE_BRANCH || wt.path === REPO) continue;
+    if (!wt.branch || wt.branch === BASE_BRANCH) continue;
     const result = await gh(REPO, ['pr', 'list', '--head', wt.branch, '--state', 'all', '--limit', '1', '--json', PR_FIELDS]);
     if (!result.ok) continue;
     let list = [];
     try {
       list = JSON.parse(result.stdout);
     } catch {}
+    const reviewed = !list.length && readReview(worktreeName(wt.path))?.pr;
+    if (reviewed) {
+      const view = await gh(REPO, ['pr', 'view', String(reviewed).replace(/^#/, ''), '--json', PR_FIELDS]);
+      try {
+        if (view.ok) list = [JSON.parse(view.stdout)];
+      } catch {}
+    }
     const before = prCache.get(wt.branch)?.pr;
     const pr = list[0] ? summarizePr(list[0]) : null;
     prCache.set(wt.branch, { at: Date.now(), pr });
