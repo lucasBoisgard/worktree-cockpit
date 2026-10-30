@@ -63,12 +63,14 @@ No npm dependency: Node, git and tmux only (`gh` for the PR features).
 | `app.healthUrl` | none | URL polled to tell starting from up (a 503 counts as not answering) |
 | `app.url` | `app.healthUrl` | "Open the app" link |
 | `app.recoveryDoc` | none | Troubleshooting doc, relative to the repo, shown on KO and read by the `run-app` skill |
+| `app.migrations.paths` | none | Migration folders, relative to the repo. When their content at `HEAD` changed since the last successful run (a pull), the migrations run: after `app.command` on the next start, or right away when the app is already running |
+| `app.migrations.command` | none | Command that applies the migrations, run in the main checkout; it must be idempotent |
 | `pr.base` | `master` | Base branch for PRs, merged checks and cleanup |
 | `pr.labels` | `[]` | Labels pre-filled in "Pousser et ouvrir la PR" |
 | `pr.assignee` | none | Assignee pre-filled in "Pousser et ouvrir la PR" |
 | `pr.template` | TL;DR / Ticket / Points d'attention / Comment tester | PR body template; `{ticket}` is replaced by the ticket id found in the branch name |
 | `notify.ntfyUrl` | none | ntfy topic URL that receives events (sent outside your network: use a private topic) |
-| `notify.types` | `needs_input`, `permission`, `question`, `ci_failed`, `app_ko` | Event types posted to ntfy |
+| `notify.types` | `needs_input`, `permission`, `question`, `ci_failed`, `app_ko`, `migrations_failed` | Event types posted to ntfy |
 
 Environment variables: `PORT` (default 8052 through `start.sh`), `HOST` or `COCKPIT_LISTEN` (default `0.0.0.0` inside a container, `127.0.0.1` elsewhere), `MACHINE_HOSTNAME` (allowed host and printed URL), `COCKPIT_HOSTS` (comma-separated extra hosts), `REPO` and `CLAUDE_BIN` (override the config).
 

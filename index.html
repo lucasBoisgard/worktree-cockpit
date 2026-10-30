@@ -423,7 +423,7 @@
   .ev-type { font: 600 11px var(--mono); padding: 1px 6px; border-radius: 4px; background: var(--grey-bg); color: var(--muted); }
   .ev-type.needs_input, .ev-type.permission, .ev-type.question { background: var(--amber-bg); color: var(--amber); }
   .ev-type.done, .ev-type.automation { background: var(--green-bg); color: var(--green); }
-  .ev-type.ci_failed, .ev-type.app_ko, .ev-type.automation_failed { background: var(--red-bg); color: var(--red); }
+  .ev-type.ci_failed, .ev-type.app_ko, .ev-type.automation_failed, .ev-type.migrations_failed { background: var(--red-bg); color: var(--red); }
   .ev-type.merged { background: var(--violet-bg); color: var(--violet); }
   .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button { border: 0; background: var(--surface); color: var(--muted); padding: 4px 9px; font-size: 12px; cursor: pointer; }
@@ -999,8 +999,8 @@
     toastTimer = setTimeout(() => (el.hidden = true), kind === 'error' || action ? 6000 : 3500);
   }
 
-  const EVENT_LABEL = { needs_input: 'Attend', permission: 'Permission', question: 'Question', done: 'Terminé', ci_failed: 'CI en échec', app_ko: 'App KO', merged: 'Mergée', automation: 'Automatisation', automation_failed: 'Automatisation KO' };
-  const EVENT_GROUPS = { input: ['needs_input', 'permission', 'question'], done: ['done', 'automation', 'merged'], error: ['ci_failed', 'app_ko', 'automation_failed'] };
+  const EVENT_LABEL = { needs_input: 'Attend', permission: 'Permission', question: 'Question', done: 'Terminé', ci_failed: 'CI en échec', app_ko: 'App KO', merged: 'Mergée', automation: 'Automatisation', automation_failed: 'Automatisation KO', migrations: 'Migrations', migrations_failed: 'Migrations KO' };
+  const EVENT_GROUPS = { input: ['needs_input', 'permission', 'question'], done: ['done', 'automation', 'merged', 'migrations'], error: ['ci_failed', 'app_ko', 'automation_failed', 'migrations_failed'] };
 
   function updateTitle() {
     const needs = state.worktrees.filter((w) => sessionStatus(w) === 'needs_input').length;

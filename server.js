@@ -61,6 +61,9 @@ const CRASH_LOOP_UPTIME_MS = 15000;
 // Dev servers, watchers and services the app command starts, outlived by their pm2 daemon or an older run
 const APP_PROCESS_PATTERN = /node_modules\/\.bin\/(vite|storybook)\b|node_modules\/storybook\/|\bnx(\.js)? watch\b|--conditions=nodeDev\b/;
 const STRAY_KILL_GRACE_MS = 5000;
+const MIGRATIONS = APP?.migrations?.command && APP.migrations.paths?.length ? APP.migrations : null;
+const MIGRATIONS_STORE = 'worktree-app-migrations.json';
+const MIGRATIONS_CHECK_MS = 30000;
 const TOKEN_FILE = path.join(__dirname, 'token');
 const ALLOWED_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', process.env.MACHINE_HOSTNAME, ...(CONFIG.hosts || []), ...(process.env.COCKPIT_HOSTS || '').split(',')].map((h) => (h || '').trim().toLowerCase()).filter(Boolean));
 const TMUX_SIZE = ['-x', '200', '-y', '50'];
@@ -878,6 +881,20 @@ async function clearApp() {
   return { error: `Process de l'app toujours vivants après SIGKILL : ${list}` };
 }
 
+// Tree hashes of the migration folders at HEAD: a pull that brings a migration changes them
+async function migrationsFingerprint() {
+  const hashes = await Promise.all(MIGRATIONS.paths.map((p) => git(REPO, ['rev-parse', `HEAD:${p}`])));
+  return hashes.map((h) => (h || '').trim()).join(',');
+}
+
+async function pendingMigrations() {
+  if (!MIGRATIONS) return null;
+  const fingerprint = await migrationsFingerprint();
+  return fingerprint === loadStore(MIGRATIONS_STORE, {}).fingerprint ? null : fingerprint;
+}
+
+const shellQuote = (s) => `'${String(s).replace(/'/g, "'\\''")}'`;
+
 async function startApp({ restart }) {
   const current = await appState();
   if (!current) return { error: "Aucune app configurée (app.command dans cockpit.config.json)." };
@@ -885,12 +902,45 @@ async function startApp({ restart }) {
   if (['up', 'degraded', 'starting'].includes(current.state) && !restart) return { error: "L'app tourne déjà." };
   const cleared = await clearApp();
   if (cleared.error) return cleared;
+  // Migrations run after the app command, once it has built what they need
+  const pending = await pendingMigrations();
+  const markMigrated = pending ? `printf '{"fingerprint":"%s","at":%s}' ${shellQuote(pending)} "$(date +%s000)" > ${shellQuote(path.join(DATA_DIR, MIGRATIONS_STORE))}` : '';
+  const command = pending ? `${APP.command} && ${MIGRATIONS.command} && ${markMigrated}` : APP.command;
   const result = await tmux([
     'new-session', '-d', '-s', APP_SESSION, ...TMUX_SIZE, '-c', REPO, '-e', TMUX_PATH,
-    'bash', '-lc', USE_PM2 ? `"${PM2_BIN}" delete all >/dev/null 2>&1; ${APP.command}` : APP.command,
+    'bash', '-lc', USE_PM2 ? `"${PM2_BIN}" delete all >/dev/null 2>&1; ${command}` : command,
     ';', 'set-option', '-t', APP_SESSION, 'remain-on-exit', 'on',
   ]);
   return result.ok ? { ok: true } : { error: result.stderr.trim() };
+}
+
+let migrating = false;
+let lastMigrationsCheck = 0;
+
+// A pull while the app runs brings no restart: run the new migrations against the running stack
+async function migrateIfPulled(app) {
+  if (!MIGRATIONS || migrating || Date.now() - lastMigrationsCheck < MIGRATIONS_CHECK_MS) return;
+  lastMigrationsCheck = Date.now();
+  if (!['up', 'degraded', 'starting'].includes(app?.state) || app.build?.running) return;
+  const pending = await pendingMigrations();
+  if (!pending) return;
+  migrating = true;
+  try {
+    const result = await new Promise((resolve) => {
+      execFile('bash', ['-lc', MIGRATIONS.command], { cwd: REPO, env: { ...process.env, PATH: TMUX_PATH.slice('PATH='.length) }, maxBuffer: 20 * 1024 * 1024 }, (error, stdout, stderr) =>
+        resolve({ ok: !error, output: stripAnsi(`${stdout || ''}\n${stderr || ''}`) }),
+      );
+    });
+    if (result.ok) {
+      saveStore(MIGRATIONS_STORE, { fingerprint: pending, at: Date.now() });
+      pushEvent({ type: 'migrations', worktree: 'app', message: 'Nouvelles migrations détectées après un pull : appliquées' });
+    } else {
+      const lastLine = result.output.split('\n').map((l) => l.trim()).filter(Boolean).pop() || '';
+      pushEvent({ type: 'migrations_failed', worktree: 'app', message: `Migrations en échec : ${lastLine.slice(0, 200)}` });
+    }
+  } finally {
+    migrating = false;
+  }
 }
 
 async function stopApp() {
@@ -1238,7 +1288,7 @@ function pushEvent(event) {
 
 function notifyExternal(event) {
   const url = CONFIG.notify?.ntfyUrl;
-  const types = CONFIG.notify?.types || ['needs_input', 'permission', 'question', 'ci_failed', 'app_ko'];
+  const types = CONFIG.notify?.types || ['needs_input', 'permission', 'question', 'ci_failed', 'app_ko', 'migrations_failed'];
   if (!url || !types.includes(event.type)) return;
   fetch(url, { method: 'POST', body: event.message || event.type, headers: { Title: `Cockpit · ${event.worktree || ''}`.trim(), Tags: event.type } }).catch(() => {});
 }
@@ -1747,6 +1797,7 @@ async function tick() {
     const snap = await snapshot();
     detectTransitions(snap);
     await flushQueues(snap);
+    migrateIfPulled(snap.app).catch((error) => console.error('migrations failed', error));
     if (Date.now() - prRefreshedAt > PR_REFRESH_MS) refreshPrs(await listWorktrees()).catch(() => {});
     if (Date.now() - lastAutomationCheck > 30000) {
       lastAutomationCheck = Date.now();
