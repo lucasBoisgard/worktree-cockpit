@@ -202,6 +202,7 @@
   .composer textarea { flex: 1; min-height: 44px; max-height: 220px; resize: vertical; font-family: inherit; font-size: 13.5px; line-height: 1.45; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
   .composer textarea:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
   .composer .note { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .composer .note:empty { display: none; }
   .composer-foot { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   .mode { margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--faint); }
   .mode[hidden] { display: none; }
@@ -329,13 +330,13 @@
   dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; }
   .notes { display: flex; flex-wrap: wrap; gap: 6px; }
   .notes:empty { display: none; }
-  .note { display: flex; align-items: center; gap: 8px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 12.5px; box-shadow: var(--shadow); cursor: pointer; max-width: min(320px, calc(100vw - 32px)); }
-  .note .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex: none; }
-  .note.input .dot { background: var(--amber); }
-  .note.error .dot { background: var(--red); }
-  .note.toast-note { cursor: default; }
-  .note b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .note button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 4px; }
+  .alert-pill { display: flex; align-items: center; gap: 8px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 12.5px; box-shadow: var(--shadow); cursor: pointer; max-width: min(320px, calc(100vw - 32px)); }
+  .alert-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex: none; }
+  .alert-pill.input .dot { background: var(--amber); }
+  .alert-pill.error .dot { background: var(--red); }
+  .alert-pill.toast-note { cursor: default; }
+  .alert-pill b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .alert-pill button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 4px; }
   .card.fresh { box-shadow: 0 0 0 2px var(--green), var(--shadow); }
 
   .kanban { display: grid; grid-template-columns: repeat(4, minmax(300px, 1fr)); gap: 14px; overflow-x: auto; align-items: start; padding-bottom: 4px; }
@@ -401,9 +402,6 @@
   .archive-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13px; }
   .archive-row .grow { flex: 1; min-width: 0; }
   .archive-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-  .bell { position: relative; }
-  .bell .n { position: absolute; top: -6px; right: -6px; background: var(--red); color: #fff; border-radius: 999px; font-size: 10.5px; font-weight: 700; padding: 1px 5px; }
-  .bell .n[hidden] { display: none; }
   .menu { position: relative; }
   .menu > summary { list-style: none; }
   .menu > summary::-webkit-details-marker { display: none; }
@@ -427,11 +425,6 @@
   .row .meta-line { font-size: 12px; color: var(--muted); }
   .row .snippet { font-size: 12px; color: var(--muted); font-family: var(--mono); overflow-wrap: anywhere; }
   .row .actions-line { display: flex; gap: 6px; flex-wrap: wrap; }
-  .ev-type { font: 600 11px var(--mono); padding: 1px 6px; border-radius: 4px; background: var(--grey-bg); color: var(--muted); }
-  .ev-type.needs_input, .ev-type.permission, .ev-type.question { background: var(--amber-bg); color: var(--amber); }
-  .ev-type.done, .ev-type.automation { background: var(--green-bg); color: var(--green); }
-  .ev-type.ci_failed, .ev-type.app_ko, .ev-type.automation_failed, .ev-type.migrations_failed { background: var(--red-bg); color: var(--red); }
-  .ev-type.merged { background: var(--violet-bg); color: var(--violet); }
   .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button { border: 0; background: var(--surface); color: var(--muted); padding: 4px 9px; font-size: 12px; cursor: pointer; }
   .seg button.on { background: var(--blue-bg); color: var(--blue); font-weight: 600; }
@@ -576,7 +569,6 @@
       <button data-order="fixed">Ordre fixe</button>
       <button data-order="state">Tableau par état</button>
     </div>
-    <button class="btn bell" id="bell-btn" title="Notifications">🔔<span class="n" id="bell-n" hidden></span></button>
     <details class="menu" id="tools-menu">
       <summary class="btn">Outils ▾</summary>
       <div class="menu-list">
@@ -709,26 +701,6 @@
   </form>
 </dialog>
 
-<dialog id="inbox-dialog" class="wide">
-  <div class="sheet">
-    <div class="sheet-head">
-      <h2>Notifications</h2>
-      <div class="seg" id="inbox-filter">
-        <button data-f="all" class="on">Toutes</button>
-        <button data-f="unread">Non lues</button>
-        <button data-f="input">Réponses attendues</button>
-        <button data-f="done">Terminés</button>
-        <button data-f="error">Erreurs</button>
-      </div>
-      <span class="grow"></span>
-      <button class="btn" id="inbox-os"></button>
-      <button class="btn" id="inbox-readall">Tout marquer lu</button>
-      <button class="btn" data-dismiss>Fermer</button>
-    </div>
-    <div class="list" id="inbox-list"></div>
-  </div>
-</dialog>
-
 <dialog id="history-dialog" class="wide">
   <div class="sheet">
     <div class="sheet-head">
@@ -844,7 +816,6 @@
       <kbd>j / k</kbd><span>Réponse suivante ou précédente, dans le lecteur</span>
       <kbd>n</kbd><span>Nouvelle session</span>
       <kbd>H</kbd><span>Historique</span>
-      <kbd>i</kbd><span>Notifications</span>
       <kbd>Échap</kbd><span>Fermer le panneau, même depuis le Terminal : pour interrompre Claude, bouton « Interrompre »</span>
       <kbd>?</kbd><span>Cette aide</span>
     </div>
@@ -945,8 +916,6 @@
   let focusIndex = -1;
   let lastSeenEvent = Number(localGet('lastSeenEvent') || 0);
   let eventsBootstrapped = false;
-  let inboxFilter = 'all';
-  let inboxEvents = [];
   let since = null;
   let sinceFiles = null;
   let ticket = null;
@@ -995,7 +964,7 @@
 
   function toast(message, kind, action) {
     const el = document.createElement('div');
-    el.className = `note toast-note ${kind === 'error' ? 'error' : ''}`;
+    el.className = `alert-pill toast-note ${kind === 'error' ? 'error' : ''}`;
     el.innerHTML = `${kind === 'error' ? '<span class="dot"></span>' : ''}<span>${esc(message)}</span><button aria-label="Fermer">×</button>`;
     const close = () => el.remove();
     el.onclick = (ev) => { close(); if (action && !ev.target.closest('button')) action(); };
@@ -1010,7 +979,7 @@
   function note(e, open) {
     const el = document.createElement('div');
     const group = EVENT_GROUPS.input.includes(e.type) ? 'input' : EVENT_GROUPS.error.includes(e.type) ? 'error' : 'done';
-    el.className = `note ${group}`;
+    el.className = `alert-pill ${group}`;
     el.title = e.message || '';
     el.innerHTML = `<span class="dot"></span><b>${esc(e.worktree || 'Cockpit')}</b><span>${esc(NOTE_TEXT[e.type] || EVENT_LABEL[e.type] || e.type)}</span><button aria-label="Fermer">×</button>`;
     const close = () => el.remove();
@@ -1027,8 +996,6 @@
     const needs = state.worktrees.filter((w) => sessionStatus(w) === 'needs_input').length;
     const working = state.worktrees.filter((w) => sessionStatus(w) === 'working').length;
     document.title = `${needs ? `(${needs}) ` : ''}Worktrees`;
-    $('bell-n').hidden = !state.unread;
-    $('bell-n').textContent = state.unread > 99 ? '99+' : String(state.unread || '');
     const color = needs ? '#e0a020' : working ? '#2f6fec' : '#8b929c';
     if (color === faviconColor) return;
     faviconColor = color;
@@ -1048,14 +1015,12 @@
     const res = await api('/api/events').catch(() => null);
     if (!res?.ok) return null;
     const data = await res.json();
-    inboxEvents = data.events;
     return data;
   }
 
   function openEvent(e) {
     post('/api/events/read', { ids: [e.id] });
     const wt = state.worktrees.find((w) => w.path === e.path || w.name === e.worktree);
-    if ($('inbox-dialog').open) $('inbox-dialog').close();
     if (wt) select(wt.path);
   }
 
@@ -1079,28 +1044,6 @@
         n.onclick = () => { window.focus(); open(); };
       }
     }
-    if ($('inbox-dialog').open) renderInbox();
-  }
-
-  function renderInbox() {
-    const list = inboxEvents.filter((e) => inboxFilter === 'all' || (inboxFilter === 'unread' ? !e.read : EVENT_GROUPS[inboxFilter].includes(e.type)));
-    $('inbox-list').innerHTML = list.length
-      ? list.map((e) => `<div class="row clickable ${e.read ? '' : 'unread'}" data-event="${e.id}">
-          <div class="top-line"><span class="ev-type ${esc(e.type)}">${esc(EVENT_LABEL[e.type] || e.type)}</span><span class="grow">${esc(e.worktree || '')}</span><span class="meta-line">il y a ${ago(e.at)}</span></div>
-          <div class="meta-line">${esc(e.message || '')}</div>
-        </div>`).join('')
-      : '<div class="placeholder">Aucune notification.</div>';
-    document.querySelectorAll('#inbox-filter button').forEach((b) => b.classList.toggle('on', b.dataset.f === inboxFilter));
-    const os = $('inbox-os');
-    if (!('Notification' in window) || !window.isSecureContext) { os.textContent = 'Notifs système : HTTPS requis'; os.disabled = true; os.title = 'Le navigateur n’autorise les notifications système qu’en HTTPS ou sur localhost.'; }
-    else if (Notification.permission === 'granted') { os.textContent = 'Notifs système actives'; os.disabled = true; }
-    else { os.textContent = 'Activer les notifs système'; os.disabled = false; }
-  }
-
-  async function openInbox() {
-    await loadEvents();
-    renderInbox();
-    if (!$('inbox-dialog').open) $('inbox-dialog').showModal();
   }
 
   function ago(ts) {
@@ -2096,7 +2039,7 @@
     $('composer-send').disabled = !live;
     $('composer-send').textContent = s?.status === 'working' ? 'Mettre en file' : 'Envoyer';
     $('queue-list').innerHTML = (s?.queue || []).map((q) => `<div class="queue-item"><span title="${esc(q.text)}">⏳ En file : ${esc(q.text)}</span><button data-dequeue="${esc(q.id)}" title="Retirer de la file">✕</button></div>`).join('');
-    if (live) $('composer-note').innerHTML = 'Le message est tapé dans la session tmux, comme si tu étais dans le terminal.';
+    if (live) $('composer-note').innerHTML = '';
     else if (s) $('composer-note').innerHTML = `Cette session ne tourne pas dans tmux : lecture seule. <button class="btn" id="resume-btn">Reprendre dans le cockpit</button>`;
     else $('composer-note').innerHTML = 'Lance une session avec « Nouvelle session » pour écrire à Claude depuis ici.';
   }
@@ -2959,7 +2902,6 @@
     items.push(
       { label: 'Nouvelle session', kind: 'action', run: () => openNewSession() },
       { label: 'Historique des sessions', kind: 'action', run: openHistory },
-      { label: 'Notifications', kind: 'action', run: openInbox },
       { label: 'Nettoyage des worktrees', kind: 'action', run: openCleanup },
       { label: 'Automatisations', kind: 'action', run: openAutomations },
       { label: 'Écrire à plusieurs sessions', kind: 'action', run: startSelecting },
@@ -3123,7 +3065,6 @@
   });
 
   $('order-seg').addEventListener('click', (e) => { const b = e.target.closest('[data-order]'); if (b) setOrder(b.dataset.order); });
-  $('bell-btn').addEventListener('click', openInbox);
   $('tools-menu').addEventListener('click', (e) => {
     const b = e.target.closest('[data-tool]');
     if (!b) return;
@@ -3131,15 +3072,6 @@
     ({ history: openHistory, cleanup: openCleanup, automations: () => { fillAutomationForm(null); openAutomations(); }, select: startSelecting, palette: openPalette, help: () => $('help-dialog').showModal() })[b.dataset.tool]?.();
   });
   document.addEventListener('click', (e) => { if (!e.target.closest('#tools-menu')) $('tools-menu').open = false; });
-
-  $('inbox-filter').addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { inboxFilter = b.dataset.f; renderInbox(); } });
-  $('inbox-list').addEventListener('click', (e) => {
-    const row = e.target.closest('[data-event]');
-    const ev = row && inboxEvents.find((x) => x.id === Number(row.dataset.event));
-    if (ev) openEvent(ev);
-  });
-  $('inbox-readall').addEventListener('click', async () => { await post('/api/events/read', { all: true }); await loadEvents(); renderInbox(); refresh(); });
-  $('inbox-os').addEventListener('click', async () => { if ('Notification' in window) await Notification.requestPermission(); renderInbox(); });
 
   $('history-q').addEventListener('input', () => { clearTimeout(historyTimer); historyTimer = setTimeout(searchHistory, 350); });
   $('history-list').addEventListener('click', (e) => { const row = e.target.closest('[data-history]'); if (row) openHistoryItem(row.dataset.history); });
@@ -3291,7 +3223,6 @@
     }
     if (e.key === 'n') { e.preventDefault(); openNewSession(); return; }
     if (e.key === 'H' || e.key === 'h') { e.preventDefault(); openHistory(); return; }
-    if (e.key === 'i') { openInbox(); return; }
     if (e.key === '?') { $('help-dialog').showModal(); }
   });
 
