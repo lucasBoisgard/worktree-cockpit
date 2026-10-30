@@ -327,9 +327,16 @@
   dialog .warn { font-size: 13px; color: var(--red); background: var(--red-bg); border-radius: 8px; padding: 8px 10px; margin: 0; }
   dialog .warn[hidden] { display: none; }
   dialog .buttons { display: flex; justify-content: flex-end; gap: 8px; }
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 13px; z-index: 30; max-width: calc(100vw - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
-  .toast.error { background: var(--red); color: #fff; }
-  .toast[hidden] { display: none; }
+  .notes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .notes:empty { display: none; }
+  .note { display: flex; align-items: center; gap: 8px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 12.5px; box-shadow: var(--shadow); cursor: pointer; max-width: min(320px, calc(100vw - 32px)); }
+  .note .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex: none; }
+  .note.input .dot { background: var(--amber); }
+  .note.error .dot { background: var(--red); }
+  .note.toast-note { cursor: default; }
+  .note b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .note button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 4px; }
+  .card.fresh { box-shadow: 0 0 0 2px var(--green), var(--shadow); }
 
   .kanban { display: grid; grid-template-columns: repeat(4, minmax(300px, 1fr)); gap: 14px; overflow-x: auto; align-items: start; padding-bottom: 4px; }
   .column { --c: var(--faint); background: var(--surface-2); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 10px; min-width: 0; border-top: 3px solid var(--c); }
@@ -559,6 +566,7 @@
 <header>
   <h1 id="repo-title">Worktrees</h1>
   <div class="counters" id="counters"></div>
+  <div class="notes" id="notes" aria-live="polite"></div>
   <div class="actions">
     <div class="filters" id="filters">
       <button class="btn" data-filter="active">Actifs</button>
@@ -870,7 +878,6 @@
   <button class="btn" id="select-cancel">Annuler</button>
 </div>
 
-<div class="toast" id="toast" hidden></div>
 
 <script>
   const STATUS = {
@@ -931,7 +938,6 @@
   let screenKey = '';
   let screenLast = '';
   let flushTimer = null;
-  let toastTimer = null;
   let order = localGet('order') || 'fixed';
   const pins = new Set(parseJson(localGet('pins'), []));
   let selecting = false;
@@ -988,14 +994,30 @@
   }
 
   function toast(message, kind, action) {
-    const el = $('toast');
-    el.textContent = message;
-    el.className = `toast ${kind || ''}`;
-    el.hidden = false;
-    el.style.cursor = action ? 'pointer' : '';
-    el.onclick = action ? () => { el.hidden = true; action(); } : null;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => (el.hidden = true), kind === 'error' || action ? 6000 : 3500);
+    const el = document.createElement('div');
+    el.className = `note toast-note ${kind === 'error' ? 'error' : ''}`;
+    el.innerHTML = `${kind === 'error' ? '<span class="dot"></span>' : ''}<span>${esc(message)}</span><button aria-label="Fermer">×</button>`;
+    const close = () => el.remove();
+    el.onclick = (ev) => { close(); if (action && !ev.target.closest('button')) action(); };
+    $('notes').querySelector('.toast-note')?.remove();
+    $('notes').prepend(el);
+    setTimeout(close, kind === 'error' || action ? 6000 : 3500);
+  }
+
+  const freshDone = new Set();
+  const NOTE_TEXT = { done: 'a fini', needs_input: 'attend ta réponse', permission: 'demande une permission', question: 'te pose une question' };
+
+  function note(e, open) {
+    const el = document.createElement('div');
+    const group = EVENT_GROUPS.input.includes(e.type) ? 'input' : EVENT_GROUPS.error.includes(e.type) ? 'error' : 'done';
+    el.className = `note ${group}`;
+    el.title = e.message || '';
+    el.innerHTML = `<span class="dot"></span><b>${esc(e.worktree || 'Cockpit')}</b><span>${esc(NOTE_TEXT[e.type] || EVENT_LABEL[e.type] || e.type)}</span><button aria-label="Fermer">×</button>`;
+    const close = () => el.remove();
+    el.onclick = (ev) => { close(); if (!ev.target.closest('button')) open(); };
+    $('notes').prepend(el);
+    while ($('notes').children.length > 4) $('notes').lastElementChild.remove();
+    setTimeout(close, group === 'done' ? 8000 : 15000);
   }
 
   const EVENT_LABEL = { needs_input: 'Attend', permission: 'Permission', question: 'Question', done: 'Terminé', ci_failed: 'CI en échec', app_ko: 'App KO', merged: 'Mergée', automation: 'Automatisation', automation_failed: 'Automatisation KO', migrations: 'Migrations', migrations_failed: 'Migrations KO' };
@@ -1050,7 +1072,8 @@
     localSet('lastSeenEvent', String(lastSeenEvent));
     for (const e of fresh.slice(-3)) {
       const open = () => openEvent(e);
-      toast(`${e.worktree ? `${e.worktree} · ` : ''}${EVENT_LABEL[e.type] || e.type} : ${e.message || ''}`, EVENT_GROUPS.error.includes(e.type) ? 'error' : '', open);
+      note(e, open);
+      if (e.type === 'done' && e.path && e.path !== selected) freshDone.add(e.path);
       if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
         const n = new Notification(`Cockpit · ${e.worktree || ''}`, { body: e.message || EVENT_LABEL[e.type], tag: `cw-${e.id}` });
         n.onclick = () => { window.focus(); open(); };
@@ -1693,7 +1716,7 @@
     const worked = workedTime(s, st);
     if (worked >= 60000) meta.push(`<span class="chip" title="Temps de travail de Claude sur cette session, attentes exclues">⏱ ${span(worked)}</span>`);
     const pinned = pins.has(wt.path);
-    return `<div class="card ${st} ${selected === wt.path ? 'selected' : ''}" data-path="${esc(wt.path)}">
+    return `<div class="card ${st} ${selected === wt.path ? 'selected' : ''} ${freshDone.has(wt.path) && st === 'done' ? 'fresh' : ''}" data-path="${esc(wt.path)}">
       <div class="top">
         ${selecting ? `<input type="checkbox" class="pick" data-pick="${esc(wt.path)}" ${picked.has(wt.path) ? 'checked' : ''} aria-label="Sélectionner ${esc(wt.name)}">` : ''}
         <div><div class="name">${esc(wt.name)}</div><div class="branch-row">${branchChip(wt)}${prChip(wt.pr)}${extChips(wt)}</div></div>
@@ -2281,6 +2304,7 @@
   }
 
   function select(target) {
+    freshDone.delete(target);
     selected = target; selectedFile = null; chatSession = null; chatSignature = null; chatBarSignature = null; reportSignature = null;
     since = null; sinceFiles = null; lastDiffText = ''; checksLoadedAt = 0; ticket = null; fileFilter = ''; collapsedDirs.clear(); $('file-filter').value = '';
     if (target === SHELL && tab !== 'app') tab = 'term';
