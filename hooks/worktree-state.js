@@ -102,6 +102,7 @@ process.stdin.on('end', () => {
       if (pane !== state.tmuxPane) state.tmuxPaneSince = now;
       state.tmuxPane = pane;
     }
+    const previous = { status: state.status, since: state.statusSince || state.updatedAt || now, updatedAt: state.updatedAt || now };
     state.startedAt = state.startedAt || now;
     state.updatedAt = now;
 
@@ -111,6 +112,7 @@ process.stdin.on('end', () => {
         break;
       case 'UserPromptSubmit':
         state.status = 'working';
+        state.turnStartedAt = now;
         state.task = state.task || shorten(input.prompt, 220);
         state.lastPrompt = shorten(input.prompt, 220);
         state.message = null;
@@ -151,6 +153,11 @@ process.stdin.on('end', () => {
         return;
     }
 
+    const restarted = input.hook_event_name === 'UserPromptSubmit' && previous.status === 'working';
+    if (state.status !== previous.status || restarted) {
+      if (previous.status === 'working') state.workedMs = (state.workedMs || 0) + Math.max(0, (restarted ? previous.updatedAt : now) - previous.since);
+      state.statusSince = now;
+    }
     writeState(file, state);
   } catch {}
 });

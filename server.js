@@ -267,7 +267,8 @@ function claudePanes(panes) {
 
 function withClaudeStatus(session, panes) {
   const claude = panes.claudeStatus?.get(session.sessionId);
-  return session.status === 'working' && claude?.status === 'idle' && claude.at > session.updatedAt ? { ...session, status: 'idle' } : session;
+  if (!(session.status === 'working' && claude?.status === 'idle' && claude.at > session.updatedAt)) return session;
+  return { ...session, status: 'idle', statusSince: claude.at, workedMs: (session.workedMs || 0) + Math.max(0, session.updatedAt - (session.statusSince || session.updatedAt)) };
 }
 
 function paneOf(session, panes) {
@@ -1364,7 +1365,8 @@ async function flushQueues(snap) {
       const [first] = items;
       if (!(await sendToSession(session.sessionId, first.text))) continue;
       dequeue(session.sessionId, first.id);
-      writeSessionState({ ...readSession(session.sessionId), status: 'working', updatedAt: Date.now() });
+      const now = Date.now();
+      writeSessionState({ ...readSession(session.sessionId), status: 'working', updatedAt: now, statusSince: now, turnStartedAt: now, workedMs: session.workedMs });
       lastStatus.set(session.sessionId, 'working');
     }
   }
